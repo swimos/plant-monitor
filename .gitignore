@@ -1,0 +1,13 @@
+.DS_Store
+*.DS_Store
+.idea
+.gradle
+.vscode
+build
+out
+*.log
+*.err
+*.out
+/java/bin
+/java/build
+/node/node_modules/

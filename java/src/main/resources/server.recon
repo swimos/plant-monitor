@@ -1,0 +1,28 @@
+plantmonitor: @fabric {
+  @plane(class: "swim.plantmonitor.ApplicationPlane")
+
+  @node {
+    pattern: "/aggregationService"
+    @agent(class: "swim.plantmonitor.agents.AggregationService")
+  }  
+
+  @node {
+    pattern: "/plant/:plantId"
+    @agent(class: "swim.plantmonitor.agents.PlantState")
+  }  
+
+  @node {
+    pattern: "/sensor/:plantId/:sensorId"
+    @agent(class: "swim.plantmonitor.agents.SensorState")
+  }  
+
+}
+
+@web(port: 9001) {
+  space: "plantmonitor"
+  documentRoot: "../ui/"
+  @websocket {
+    serverCompressionLevel: 9# -1 = default; 0 = off; 1-9 = deflate level
+    clientCompressionLevel: 9# -1 = default; 0 = off; 1-9 = deflate level
+  }
+}
