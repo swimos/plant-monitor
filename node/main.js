@@ -22,13 +22,13 @@ class Main {
         };
         this.arduino = {
             board: null,
-            address: "/dev/ttyACM0",
+            address: "/dev/ttyS3",
             baud: 115200
         };
         this.processCommandLineArgs();
 
         this.sensorData = null;
-        this.loopInterval = 2000;
+        this.loopInterval = 500;
         this.loopTimeout = null;
     }
 
@@ -48,7 +48,7 @@ class Main {
             this.sensorData = JSON.parse(newData);
         } catch (e) {
             // we actually dont care about errors here
-
+            // console.error(e);
         }
     }
 
@@ -62,7 +62,7 @@ class Main {
         }
 
         if(this.sensorData !== null) {
-            // swimClient.command(this.swimUrl, `/plant/${this.plantInfo.id}`, 'setSensorData', this.sensorData);
+            swimClient.command(this.swimUrl, `/plant/${this.plantInfo.id}`, 'setSensorData', this.sensorData);
             for(let sensorKey in this.sensorData) {
                 // console.info(this.swimUrl, `/sensor/${this.plantInfo.id}/${sensorKey}`, 'setLatest', this.sensorData[sensorKey]);
                 const msg = {
@@ -73,9 +73,12 @@ class Main {
                 // console.info(this.swimUrl, `/sensor/${this.plantInfo.id}/${sensorKey}`, 'setLatest', msg);
                 swimClient.command(this.swimUrl, `/sensor/${this.plantInfo.id}/${sensorKey}`, 'setLatest', msg);
             }
+            this.loopTimeout = setTimeout(this.mainLoop.bind(this), this.loopInterval);
+        } else {
+            this.loopTimeout = setTimeout(this.mainLoop.bind(this), 10);
         }
 
-        this.loopTimeout = setTimeout(this.mainLoop.bind(this), this.loopInterval);
+        
     }
 
     /**

@@ -8,6 +8,10 @@
 class PlantPage {
 
   swimUrl = null;
+  ledSwimUrl = "warp://192.168.1.68:9001";
+  currentPanelId = "left";
+  panelWidth = 32;
+  panelHeight = 32;
   links = {};
   plantList = {};
   plantListSynced = false;
@@ -18,9 +22,10 @@ class PlantPage {
   sensorList = [];
   sensorListSynced = false;
 
-  tween = swim.Transition.duration(120);
+  tween = swim.Transition.duration(300);
 
   mainGauge = null;
+  ledGauge = null;
   soilDial = null;
   lightDial = null;
   tempDial = null;
@@ -31,6 +36,8 @@ class PlantPage {
 
   charts = [];
   plots = [];
+
+  tempImg = new Image();
 
   constructor(swimUrl) {
     this.swimUrl = swimUrl;
@@ -68,7 +75,10 @@ class PlantPage {
     this.initPage();
     this.plantListLink.open()
 
+    // const mainElem = document.getElementsByTagName("main")[0];
+    // mainElem.appendChild(this.tempImg);
 
+    this.syncPanelToPreview()
   }
 
   initPage() {
@@ -79,7 +89,7 @@ class PlantPage {
     // Create a new gauge view
     this.mainGauge = new swim.GaugeView()
       .innerRadius(swim.Length.pct(20))
-      .outerRadius(swim.Length.pct(45))
+      .outerRadius(swim.Length.pct(50))
       .dialColor(swim.Color.rgb(100, 100, 100, 0.2))
       .title(new swim.TextRunView("Plant 1").font("20px sans-serif"))
       .font("14px sans-serif")
@@ -92,13 +102,13 @@ class PlantPage {
     canvas.append(this.mainGauge);
 
     this.soilDial = new swim.DialView()
-      .total(1000)
+      .total(100)
       .value(0) // initialize to zero so the dial will tween in
       .meterColor(this.soilColor)
       .label(new swim.TextRunView().textColor("#4a4a4a"));
 
     this.lightDial = new swim.DialView()
-      .total(1000)
+      .total(100)
       .value(0) // initialize to zero so the dial will tween in
       .meterColor(this.lightColor)
       .label(new swim.TextRunView().textColor("#4a4a4a"));
@@ -113,22 +123,52 @@ class PlantPage {
     this.mainGauge.append(this.lightDial);
     this.mainGauge.append(this.tempDial);
 
-    const chartList = ['temperatureCh1', 'light', 'soil'];
+    const ledGaugePanel = new swim.HtmlAppView(document.getElementById("ledGauge"));
+    const ledcanvas = ledGaugePanel.append("canvas");
+
+    // Create a new gauge view
+    this.ledGauge = new swim.GaugeView()
+      .innerRadius(swim.Length.pct(30))
+      .outerRadius(swim.Length.pct(49))
+      .dialColor(swim.Color.rgb(30, 30, 30, 0.1))
+      .title(new swim.TextRunView("1"))
+      .font("10px \"orbitron\"")
+      .textColor("#ccc")
+      // .cornerRadius(4)
+    // and append it to the canvas.
+    
+    ledcanvas.append(this.ledGauge);
+    this.ledGauge.parentView.node.style.letterSpacing="1px";
+
+    this.ledDial = new swim.DialView()
+      .total(100)
+      .value(0) // initialize to zero so the dial will tween in
+      .meterColor(swim.Color.rgb(0,0,255))
+      .label(new swim.TextRunView().textColor("#4a4a4a"));
+
+    this.ledGauge.append(this.ledDial);
+
+    const chartList = ['tempAvg', 'light', 'soil'];
 
     for (let chartKey of chartList) {
       const chartPanel = new swim.HtmlAppView(document.getElementById(`${chartKey}Chart`));
       const chartCanvas = chartPanel.append("canvas");
   
   
+      const clr = "#fff";
       this.charts[chartKey] = new swim.ChartView()
         .bottomAxis("time")
         .leftAxis("linear")
         .bottomGesture(false)
-        .leftDomainPadding([0.1, 0.1])
-        .domainColor("#4a4a4a")
-        .tickMarkColor("#4a4a4a")
-        .font("12px sans-serif")
-        .textColor("#4a4a4a");
+        .leftDomainPadding([0, 0])
+        .topGutter(0)
+        .bottomGutter(20)
+        .leftGutter(25)
+        .rightGutter(0)
+        .font("12px \"Open Sans\"")
+        .domainColor(clr)
+        .tickMarkColor(clr)
+        .textColor(clr);
 
       this.plots[chartKey] = new swim.LineGraphView()
         .strokeWidth(2);
@@ -140,7 +180,7 @@ class PlantPage {
         case 'light':
           this.plots[chartKey].stroke(this.lightColor);
           break;
-        case 'temperatureCh1':
+        case 'tempAvg':
           this.plots[chartKey].stroke(this.tempColor);
           break;
 
@@ -176,15 +216,17 @@ class PlantPage {
                 switch (sensor) {
                   case "soil":
                     this.soilDial.value(newValue.numberValue(), this.tween);
-                    const labelValue1 = Math.round((newValue.stringValue() / 1000) * 100);
+                    const labelValue1 = newValue.stringValue();
                     this.soilDial.label(`${labelValue1}%`);
                     break;
                   case "light":
                     this.lightDial.value(newValue.numberValue(), this.tween);
-                    const labelValue2 = Math.round((newValue.stringValue() / 1000) * 100);
+                    const labelValue2 = newValue.stringValue();
                     this.lightDial.label(`${labelValue2}%`);
                     break;
-                  case "temperatureCh1":
+                  case "tempAvg":
+                    this.ledDial.value(newValue.numberValue(), this.tween);
+                    this.ledGauge.title(newValue.stringValue());
                     this.tempDial.value(newValue.numberValue(), this.tween);
                     this.tempDial.label(`${newValue.stringValue()}°F`);
                     break;
@@ -219,6 +261,94 @@ class PlantPage {
 
   }
 
+  
+  chartToLed() {
+    const mainElem = document.getElementsByTagName("main")[0];
+    this.tempImg.style.imageRendering = "pixelated"
+    this.tempImg.height = this.panelHeight;
+    this.tempImg.width = this.panelWidth;
+    // mainElem.appendChild(this.tempImg);
 
+    this.tempImg.onload = (() => {
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = this.panelWidth;
+      tempCanvas.height = this.panelHeight;
+      const canvasContext = tempCanvas.getContext("2d");
+      canvasContext.drawImage(this.tempImg, 0, 0, this.panelWidth, this.panelHeight);
+      // mainElem.appendChild(tempCanvas);
+  
+      const newFrame = [];
+      const pallette = [];
+      const canvasWidth = this.tempImg.width;
+      const canvasHeight = this.tempImg.height;
+      const totalPixels = canvasWidth * canvasHeight;
+      let row = -1;
+      let rowIndex = 0;
+  
+      // foreach pixel in frame
+      for (let i = 0; i < totalPixels; i++) {
+        if (i % canvasWidth == 0) {
+          row++;
+          rowIndex = 0;
+        }
+        let x = rowIndex;
+        let y = row;
+  
+        let pixelData = canvasContext.getImageData(x, y, 1, 1).data;
+  
+        const currColorStr = [pixelData[0], pixelData[1], pixelData[2]].toString();
+        if (pallette.indexOf(currColorStr) === -1) {
+          pallette.push(currColorStr);
+        }
+        const colorIndex = pallette.indexOf(currColorStr);
+        newFrame.push(colorIndex);
+        // console.info(x, y, frame, row);
+        rowIndex++;
+      }    
+      this.pushFrameSizeToPanel();
+      this.pushPalletteToPanel(JSON.stringify(pallette));
+      this.showLedPixels(newFrame.toString());
 
+    });
+    this.tempImg.src = document.getElementsByTagName("canvas")[4].toDataURL();
+
+  }
+
+  
+
+  showLedPixels(pixels) {
+    // this.ledPixels = JSON.parse(pixels);
+
+    swim.command(this.ledSwimUrl, `/ledPanel/${this.currentPanelId}`, 'setLedPixelIndexes', pixels);
+    // swim.command(this.swimUrl, `/ledPanel/${this.currentPanelId}`, 'setLedCommand', "showPixels");
+  }
+
+  stopAnimationOnPanel() {
+    swim.command(this.ledSwimUrl, `/ledPanel/${this.currentPanelId}`, 'setLedCommand', 'stop');
+  }  
+
+  /**
+   * util to push current active pallette to selected panel
+   */
+  pushPalletteToPanel(pallette) {
+    swim.command(this.ledSwimUrl, `/ledPanel/${this.currentPanelId}`, 'setColorPallette', pallette);
+  }
+
+  pushFrameSizeToPanel() {
+    const size = {
+      width: this.panelWidth,
+      height: this.panelHeight
+    }
+    swim.command(this.ledSwimUrl, `/ledPanel/${this.currentPanelId}`, 'setFrameSize', size);
+  }  
+
+  syncPanelToPreview() {
+      this.stopAnimationOnPanel();
+      swim.command(this.ledSwimUrl, `/ledPanel/${this.currentPanelId}`, 'setLedCommand', 'sync');
+      this.chartToLed();
+      
+      setTimeout(() => {
+        this.syncPanelToPreview()
+      }, 20);
+  }  
 }
