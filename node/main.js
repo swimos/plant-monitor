@@ -13,22 +13,22 @@ class Main {
     constructor() {
         this.showDebug = false;
         this.args = {};
-        this.swimUrl = "ws://127.0.0.1:9001";
+        this.swimUrl = "ws://127.0.0.1:9002";
         this.plantId = "test1";
         this.plantInfo = {
-            id: "test1",
+            id: "Desk",
             name: "Test One",
             useSim: false
         };
         this.arduino = {
             board: null,
-            address: "/dev/ttyS3",
+            address: "/dev/ttyACM0",
             baud: 115200
         };
         this.processCommandLineArgs();
 
         this.sensorData = null;
-        this.loopInterval = 500;
+        this.loopInterval = 10000;
         this.loopTimeout = null;
     }
 

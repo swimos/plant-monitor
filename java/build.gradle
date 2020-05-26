@@ -108,5 +108,36 @@ afterEvaluate {
       batFile.text = batContent.replaceFirst('APP_HOME_LIBS', Matcher.quoteReplacement('%APP_HOME%\\lib'))
     }
   }
+  
+  task packageDeb(type: Deb) {
+    maintainer = 'scott.clarke@swim.ai'
 
+    configurationFile("/etc/sysconfig/${project.name}")
+    preInstall "addgroup --quiet --system ${project.name}"
+    preInstall "adduser --quiet --system --ingroup ${project.name} --no-create-home --disabled-password ${project.name}"
+    postInstall "systemctl preset ${project.name} > /dev/null 2>&1"
+    postInstall "systemctl start ${project.name} > /dev/null 2>&1"
+    preUninstall  "systemctl disable ${project.name} > /dev/null 2>&1"
+    preUninstall  "systemctl stop ${project.name} > /dev/null 2>&1"
+    postUninstall "systemctl daemon-reload > /dev/null 2>&1"
+
+    from('pkg') {
+      into '/etc/systemd/system'
+      include '*.service'
+      addParentDirs false
+      expand project.properties
+      user 'root'
+      permissionGroup 'root'
+      fileMode = 0644
+    }
+
+    from('pkg') {
+      into '/etc/sysconfig'
+      include "${project.name}"
+      user 'root'
+      permissionGroup 'root'
+      fileMode = 0644
+      fileType CONFIG | NOREPLACE
+    }
+  }
 }

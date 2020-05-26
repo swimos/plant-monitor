@@ -18,7 +18,7 @@ plantmonitor: @fabric {
 
 }
 
-@web(port: 9001) {
+@web(port: 9002) {
   space: "plantmonitor"
   documentRoot: "../ui/"
   @websocket {

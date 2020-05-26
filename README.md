@@ -12,3 +12,14 @@ Sensor data received by NodeJS which roues the data into Swim via command lanes.
 Web UI showing real time state of a single plant based on the agent structure decribed above.
 
 ![screenshot](/ui/assets/images/ui-screenshot.png)
+
+setting up as a service
+https://www.raspberrypi.org/documentation/linux/usage/systemd.md
+
+* cd to proejct root
+* sudo cp swim-plant-monitor-* /etc/systemd/system/
+* sudo systemctl daemon-reload
+* sudo systemctl start swim-plant-monitor-server.service
+* sudo systemctl start swim-plant-monitor-client.service
+* sudo systemctl enable swim-plant-monitor-server.service
+* sudo systemctl enable swim-plant-monitor-client.service

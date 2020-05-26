@@ -8,7 +8,7 @@
 class PlantPage {
 
   swimUrl = null;
-  ledSwimUrl = "warp://192.168.1.68:9001";
+  ledSwimUrl = "warp://192.168.1.69:9001";
   currentPanelId = "left";
   panelWidth = 32;
   panelHeight = 32;
@@ -349,6 +349,6 @@ class PlantPage {
       
       setTimeout(() => {
         this.syncPanelToPreview()
-      }, 20);
+      }, 1000);
   }  
 }
