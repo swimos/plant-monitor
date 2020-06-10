@@ -5,6 +5,10 @@ const ArduinoBoard = require('./modules/ArduinoBoard');
 // include SWIM client
 const swimClient = require('@swim/client');
 
+const WebSocketClient = require('websocket').client;
+
+const https = require('https')
+
 // grab command line argumenets
 const commandLineArgs = process.argv
 
@@ -20,75 +24,423 @@ class Main {
         this.swimUrl = 'ws://' + this.swimAddress + ':' + this.swimPort;
 
         this.showDebug = this.config.showDebug;
+        this.authtoken = this.config.authToken;
+        this.apiUrl = this.config.apiUrl;
         this.deviceId = this.config.deviceId;
+        this.deviceLookup = [];
 
         this.plantInfo = this.config.plantInfo;
 
-        this.arduino = {
-            board: null,
-            enabled: this.config.arduino.enabled || false,
-            address: this.config.arduino.address || null,
-            baud: this.config.arduino.baud || null
-        };
+        this.asyncIds = [];
 
         this.sensorData = {};
         this.loopInterval = this.config.mainLoopInterval;
         this.loopTimeout = null;
         this.dataChanged = false;
+
+        this.endPointUriLookup = {};
+
+        this.msgBuffer = '';
+        this.msgFirstChar = null;
     }
 
 
+    /**
+     * main startup. Delete any active subs and start a new session
+     */
     start() {
-        // start Arduino connection if enabled in config
-        if (this.arduino.enabled) {
-            this.arduino.board = new ArduinoBoard(false);
-            this.arduino.board.startPort(this.arduino.address, this.arduino.baud);
-            this.arduino.board.setDataHandler(this.onSerialData.bind(this));
-        }
 
-        // reigster new plant with Swim Server
-        swimClient.command(this.swimUrl, `/plant/${this.plantInfo.id}`, 'createPlant', this.plantInfo);
+        // delete any existing callbacks 
+        this.httpRequest('/v2/notification/callback', '', 'DELETE', (result) => {
+            this.info("delete /v2/notification/callback result:", result);
+        });
+        this.httpRequest('/v2/notification/pull', '', 'DELETE', (result) => {
+            this.info("delete /v2/notification/pull result:", result);
+        });
+        this.httpRequest('/v2/notification/websocket', '', 'DELETE', (result) => {
+            this.info("delete /v2/notification/websocket result:", result);
+        });
 
-        // kick off app loop
-        this.mainLoop();
+        // create a subscription to get notifications over sockets
+        this.httpRequest('/v2/notification/websocket', '', 'PUT', (result) => {
+            this.info("create socket request result:", result);
+            // open websocket to get notifitcations
+            this.openSocket();
+        });
+
     }
 
-    // handle data sent from arduinio or other serial device. Should be receiving JSON formatted messages.
-    onSerialData(newData) {
-        try {
-            this.sensorData = JSON.parse(newData);
-        } catch (e) {
-            // we actually dont care about errors here
-            // console.error(e);
+    /**
+     * Open websocket to api server
+     */
+    openSocket() {
+        if (this.websocket !== null) {
+            this.websocket = null;
         }
-    }
+        this.websocket = new WebSocketClient();
 
-    mainLoop() {
-        if (this.showDebug) {
-            // console.info('[main] mainLoop', this.sensorData);
-        }
+        this.websocket.on('connectFailed', (error) => {
+            this.info('Connect Error: ' + error.toString());
+            this.info(`api url ${this.apiUrl}`);
+        });
 
-        if (this.loopTimeout !== null) {
-            clearTimeout(this.loopTimeout);
-        }
+        // create onConnect handler
+        this.websocket.on('connect', (connection) => {
+            this.info('WebSocket Client Connected');
+            
+            // start loading devices now that we have a socket connection
+            this.getDeviceList();
 
-        if (this.sensorData !== null) {
-            swimClient.command(this.swimUrl, `/plant/${this.plantInfo.id}`, 'setSensorData', this.sensorData);
-            for (let sensorKey in this.sensorData) {
-                // console.info(this.swimUrl, `/sensor/${this.plantInfo.id}/${sensorKey}`, 'setLatest', this.sensorData[sensorKey]);
-                const msg = {
-                    plantId: this.plantInfo.id,
-                    sensorId: sensorKey,
-                    sensorData: this.sensorData[sensorKey]
+            connection.on('error', (error) => {
+                this.info("Connection Error: " + error.toString());
+            });
+            connection.on('close', (msg) => {
+                this.info('WebSocket Connection Closed', msg);
+                // wait 30 seconds and reconnect
+                setTimeout(() => {
+                    this.start();
+                }, 30000);
+            });
+            connection.on('message', (message) => {
+                if (message.type === 'utf8') {
+                    // this.info("Received: '" + message.utf8Data + "'");
+                    this.handleSocketMessage(message.utf8Data);
                 }
-                // console.info(this.swimUrl, `/sensor/${this.plantInfo.id}/${sensorKey}`, 'setLatest', msg);
-                swimClient.command(this.swimUrl, `/sensor/${this.plantInfo.id}/${sensorKey}`, 'setLatest', msg);
-            }
-            this.loopTimeout = setTimeout(this.mainLoop.bind(this), this.loopInterval);
-        } else {
-            this.loopTimeout = setTimeout(this.mainLoop.bind(this), 10);
+            });
+
+        });
+
+        // define header for auth
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.authtoken}`
         }
 
+        // open socket
+        this.websocket.connect(`wss://${this.apiUrl}/v2/notification/websocket-connect`, null, null, headers);
+
+    }
+
+    /**
+     * Get list of Devices from Connect API
+     */
+    getDeviceList() {
+        this.info('[main] getDeviceList');
+        this.httpRequest('/v3/devices', '', 'GET', (result) => {
+
+            // covert result into json
+            let firstChar = result.charAt(0);
+            let lastChar = result.charAt(result.length - 1);
+            let resultData = null
+
+            // if first and last charts are brackets, parse as json 
+            // otherwise buffer message until first/last brackets are found
+            if (firstChar === '{' && lastChar === '}') {
+                this.info("Device list loaded without buffering");
+                resultData = JSON.parse(result); // parse message                
+                this.deviceList = resultData.data; // store parsed list as this.deviceList
+                this.loadDevices(); // load devices from api
+            } else {
+                this.msgBuffer += result;
+                let firstChar = this.msgBuffer.charAt(0);
+                let lastChar = this.msgBuffer.charAt(this.msgBuffer.length - 1);
+
+                // first last brackets found in buffer so convert to json
+                if (firstChar === '{' && lastChar === '}') {
+                    this.info("Device list loaded by buffering messages");
+                    resultData = JSON.parse(this.msgBuffer); // parse buffer                    
+                    this.deviceList = resultData.data; // store parsed list as this.deviceList
+                    this.msgBuffer = ''; // reset string buffer
+                    this.loadDevices(); // load devices from API
+                }
+
+            }
+
+        });
+
+    }
+
+    /**
+     * Load devices will get called on startup and anytime a device status changes on connect api (like deregistation)
+     * for each device in device list that is registered:
+     * 1. notify swim of device (plant)
+     * 2. remove any active subscritions for device from api
+     * 3. create new subscriptions for device
+     * 4. update our device lookup with id so we know we have created subs
+     */
+    loadDevices() {
+        // this.info(this.deviceList);
+        for (let device of this.deviceList) {
+
+            // if (this.deviceLookup.indexOf(device.id) === -1) {
+
+                // this.info(this.swimUrl, `/plant/${device.endpoint_name}`, 'createPlant', device);
+                if (device.state === "registered") {
+                    // notify swim of new plant
+                    swimClient.command(this.swimUrl, `/plant/${device.endpoint_name}`, 'createPlant', device);
+                    // delete existing subs
+                    this.deleteActiveSubscriptions(device.endpoint_name);
+                    // create new subs
+                    this.subscribeToDeviceEndpoints(device.endpoint_name);
+                    // add device in lookup so we know its been created.
+                    this.deviceLookup.push(device.id);
+                } else {
+                    // delete existing subs
+                    this.deleteActiveSubscriptions(device.endpoint_name);
+                    this.deviceLookup = this.deviceLookup.filter((value, index, arr) => { return value !== device.id});
+                    this.info(`Device ${device.endpoint_name} not registered`);
+                }
+                
+            // }
+        }
+    }
+
+    /**
+     * Create a new subscription to each resource endpoint
+     * that is defined in our config file. 
+     * This will both create a Connect API 
+     * subscrition and create a Sensor WebAgent in Swim to 
+     * which will recieve the resource data changes from these 
+     * subscriptions.
+     * @param {*} deviceId 
+     */
+    subscribeToDeviceEndpoints(deviceId) {
+        // for each endpoint sub and add sensor
+        for (const index in this.config.endpoints) {
+            const endpoint = this.config.endpoints[index]; // current endpoint config data
+
+            // if current endpoint is enabled
+            if (endpoint.enabled) {
+                // save current endpoint into lookup array
+                this.endPointUriLookup[endpoint.subscription.uri] = endpoint;
+                // call to make api subscrptions 
+                this.subscribeToEndpoint(deviceId, endpoint.subscription);
+                // define sensor info for current resource endpoint
+                const msg = {
+                    plantId: deviceId,
+                    sensorName: endpoint.name,
+                    sensorId: endpoint.lane,
+                    resourcePath: endpoint.subscription.uri
+                }
+
+                // create new sensor webagent 
+                swimClient.command(this.swimUrl, `/sensor/${deviceId}/${endpoint.lane}`, 'setInfo', msg);
+
+            }
+        }
+    }
+
+    /**
+     * make http DELETE request to connect api to remove active subscritions for an endopint
+     * @param {*} endpointName 
+     */
+    deleteActiveSubscriptions(endpointName) {
+        this.info('[main] deleteActiveSubscriptions', endpointName);
+        this.httpRequest(`/v2/subscriptions/${endpointName}`, '', 'DELETE', (result) => {
+            this.info('deleteActiveSubscriptions', result);
+        });
+    }
+
+    /**
+     * Make http PUt request to subscrbe to changes to a given 
+     * endpoint resource. Also parse the returned async response IDs
+     * so we can make calls back to those resource endpoints later (ex: blink LED)
+     * @param {*} endpointName 
+     * @param {*} endpoint 
+     */
+    subscribeToEndpoint(endpointName, endpoint) {
+        // this.info('[main] subscribeToEndpoint', endpointName, endpoint);
+        this.httpRequest(`/v2/subscriptions/${endpointName}${endpoint.uri}`, '', 'PUT', (result) => {
+            this.info('[main] subscribeToEndpoint', result);
+            let firstChar = result.charAt(0);
+            let lastChar = result.charAt(result.length - 1);
+
+            if (firstChar === '{' && lastChar === '}') {
+                const resultData = JSON.parse(result);
+                const newId = resultData['async-response-id'];
+                this.asyncIds[newId] = {
+                    asyncId: newId,
+                    deviceId: endpointName,
+                    uri: endpoint.uri
+                }
+
+                this.getResourceValue(endpointName, newId, endpoint.uri);
+
+                const currEndpoint = this.endPointUriLookup[endpoint.uri];
+                swimClient.command(this.swimUrl, `/sensor/${endpointName}/${currEndpoint.lane}`, 'setAsyncId', newId);
+                // this.info(this.swimUrl, `/sensor/${endpointName}/${currEndpoint.lane}`, 'setAsyncId', newId);
+                // swimClient.command(this.swimUrl, `/sensor/${endpointName}/${currEndpoint.lane}`, 'setLatest', {sensorData: 0});
+
+            } else {
+                this.info(`Endpoint ${endpointName} for ${endpoint.uri} had a connection error`);
+                this.info(result);
+            }
+
+
+        });
+
+    }
+
+    /**
+     * Make http GET request to ask the Connect API 
+     * to return the current value of a given resource endpoint.
+     * Data will come back in notifcation websocket channel and will
+     * be route to the correct sensor web agent there.
+     * 
+     * @param {*} endpointName 
+     * @param {*} asyncId 
+     * @param {*} uri 
+     */
+    getResourceValue(endpointName, asyncId, uri) {
+        const msg = `{"method": "GET", "uri": "${uri}"}`;
+        this.info("Get resource value", msg);
+        this.httpRequest(`/v2/device-requests/${endpointName}?async-id=${asyncId}`, msg, 'POST', (result) => {
+            this.info("getResourceValue", result);
+        });
+    }
+
+    /**
+     * handle all messages coming from the 
+     * Connect API websocket connection
+     * 
+     * @param {*} result 
+     */
+    handleSocketMessage(result) {
+        // this.info("socket message", result);
+        if (result !== "CONCURRENT_PULL_REQUEST_RECEIVED" && result !== "URI_PATH_DOES_NOT_EXISTS") {
+            try {
+                //convert socker message (result) to JSON
+                const resultData = JSON.parse(result);
+                // this.info("SOCKET MESSAGE:", resultData);
+                //decide how to deal with message based on messge content
+                if (resultData.notifications) {
+                    // message are from notification channel
+                    this.parseNotifications(resultData.notifications);
+                } else if (resultData.registrations || resultData["reg-updates"]) {
+                    // message was a device registration change
+                    this.info("new device(s) registered");
+                    this.getDeviceList();
+
+                } else {
+                    // message was async notification and are handled
+                    // differently from normal notifications because async-ids 
+                    // are needs to maps back to the correct sensor web agent. 
+                    // There can be multiple asinc ids in a message.
+                    const asyncNotifs = resultData[Object.keys(resultData)[0]];
+
+                    // for each asunc id notif
+                    for (let i = 0; i < asyncNotifs.length; i++) {
+                        const currNotif = asyncNotifs[i];
+
+                        // find the correct receiver
+                        const receiver = (this.asyncIds[currNotif.id]);
+                        if (receiver && currNotif.payload) {
+                            //if we have a receiver and a payload, covert payload to Base64
+                            const data = Buffer.from(currNotif.payload, 'base64').toString('utf-8');
+
+                            // find the right resource endopint for the message
+                            const currEndpoint = this.endPointUriLookup[receiver.uri];
+                            // this.info('async notif', receiver, currNotif, currEndpoint);
+
+                            // send the Base64 data to the proper Sensor Webagent for the resouce endpoint
+                            swimClient.command(this.swimUrl, `/sensor/${currNotif.ep}/${currEndpoint.lane}`, 'setLatest', { sensorData: data });
+
+                            this.info(this.swimUrl, `/sensor/${currNotif.ep}/${currEndpoint.lane}`, 'setLatest', { sensorData: data });
+
+                        }
+                    }
+                }
+            } catch (ex) {
+                // there was an error so throw it
+                this.info('notification parse error')
+                this.info(ex);
+            }
+
+
+        } 
+
+    }
+
+    /**
+     * Parse a list of incoming notifications sent on the websoket
+     * 
+     * @param {*} notifications 
+     */
+    parseNotifications(notifications) {
+        // for each notification
+        for (let msg of notifications) {
+            // make sure message has a resource path so we know where its from
+            if (msg.path) {
+                // convert message data from base64 to utf-8 string
+                const data = Buffer.from(msg.payload, 'base64').toString('utf-8');
+                // find resource endpoint for the message path
+                const currEndpoint = this.endPointUriLookup[msg.path];
+                // make sure we found the endoint
+                if (currEndpoint) {
+                    // update the sensor webagent for the resource endopint with the new data
+                    swimClient.command(this.swimUrl, `/sensor/${msg.ep}/${currEndpoint.lane}`, 'setLatest', { sensorData: data });
+                    this.info(this.swimUrl, `/sensor/${msg.ep}/${currEndpoint.lane}`, 'setLatest', { sensorData: data });
+                } else {
+                    this.info("end point not found in lookup:", msg.ep, msg.path);
+                }
+            } else {
+                this.info('no receiver', msg);
+
+            }
+        }
+    }
+   
+
+    /**
+     * Utility method to make a HTTP Request and pass
+     * the proper auth headers for the Pelion Connect API
+     * 
+     * @param {*} path 
+     * @param {*} data 
+     * @param {*} type 
+     * @param {*} onComplete 
+     * @param {*} onError 
+     */
+    httpRequest(path, data, type, onComplete, onError) {
+        // this.info("httpRequest", path, data, type)
+
+        // create auth header
+        const options = {
+            hostname: this.apiUrl,
+            path: path,
+            method: type,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.authtoken}`
+            }
+        }
+
+        // create request object
+        const req = https.request(options, res => {
+            // this.info(res);
+            this.httpRes = res;
+            res.on('data', d => {
+                // this.info(d);
+                onComplete(d.toString())
+            })
+        })
+
+        // error handler
+        req.on('error', error => {
+            console.error(error)
+            if (onError) {
+                onError(error);
+            }
+
+        })
+
+        // send data to server such as for POST or PUT
+        if (data) {
+            req.write(data);
+        }
+
+        // complete request
+        req.end()
 
     }
 
@@ -111,13 +463,19 @@ class Main {
      */
     loadConfig(configName) {
         if (this.showDebug) {
-            console.info('[main] load config');
+            this.info('[main] load config');
         }
         // load config
         this.config = require('../config/' + configName + '.json');
 
         if (this.showDebug) {
-            console.info('[main] config loaded');
+            this.info('[main] config loaded');
+        }
+    }
+
+    info(...args) {
+        if(this.showDebug) {
+            console.info(...args);
         }
     }
 }

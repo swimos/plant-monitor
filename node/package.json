@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@swim/client": "^3.10.2",
-    "serialport": "^9.0.0"
+    "serialport": "^9.0.0",
+    "websocket": "^1.0.31"
   }
 }

@@ -1,15 +1,60 @@
 {
     "plantInfo": {
-        "id": "desktop1",
-        "name": "Desktop Plant"
+        "id": "test1",
+        "name": "Test One"
     },
     "swimAddress": "127.0.0.1",
     "swimPort": "9001",
-    "showDebug": true,
-    "mainLoopInterval": 2000,
-    "arduino": {
-        "enabled": true,
-        "address": "/dev/ttyS3",
-        "baud": 115200
-    }
+    "showDebug": false,
+    "mainLoopInterval": 5000,
+    "authToken": "ak_1MDE3MjI5MWVlZWVhN2ExZTNkYzEyYWU3MDAwMDAwMDA01722982f11bceef6448061800000000hHrp7q2Ow4TeYe9x5SkkOCJ28GBIRThK",
+    "apiUrl": "api.us-east-1.mbedcloud.com",
+    "endpoints": [
+        {
+            "name": "Blink Action",
+            "lane": "blinkAction",
+            "enabled": true,
+            "subscription": {
+                "uri": "/3201/0/5850", 
+                "obs": true                
+            }             
+        },
+        {
+            "name": "Light Level",
+            "lane": "light",
+            "enabled": true,
+            "subscription": {
+                "uri": "/3203/0/5510", 
+                "obs": true                
+            }             
+        },
+        {
+            "name": "Soil Water Level",
+            "lane": "soil",
+            "enabled": true,
+            "subscription": {
+                "uri": "/3203/0/5511", 
+                "obs": true                
+            }             
+        },
+        {
+            "name": "Average Temperature",
+            "lane": "tempAvg",
+            "enabled": true,
+            "subscription": {
+                "uri": "/3203/0/5512", 
+                "obs": true                
+            }             
+        },
+        {
+            "name": "Humidity",
+            "lane": "humidity",
+            "enabled": true,
+            "subscription": {
+                "uri": "/3203/0/5514", 
+                "obs": true                
+            }             
+        }
+    ]
+
 }

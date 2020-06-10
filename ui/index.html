@@ -38,32 +38,89 @@
 		Plant Monitor
 	</header>
 	<main class="main" id="main">
-		<div>
+		<div class="plantListColumn">
 			<h4>Plant List</h4>
+			<div class="plantListColumns">
+				<div>Plant Name</div>
+				<div style="text-align: center;">Alerts</div>
+			</div>
 			<div id="plantListingDiv">
 
 			</div>
+
 		</div>
-        <div>
-            <h4>Current Levels</h4>
-            <div style="width: 400px; height: 400px;" id="soilGauge">
+        <div class="gauge">
+            <h4 class="plantHeader">
+				<div id="plantNameHeader">Plant</div>			
+			</h4>
+            <div style="width: 100%; height: calc(100% - 31px);" id="soilGauge">
             
 			</div>
-			<div style="display: grid; grid-template-columns: 25% 75%;">
-				<div>humidity:</div><div id="humidityValue">0</div>
-				<div>pressure:</div><div id="pressureValue">0</div>
+			<div class="plantButtons">
+				<input type="button" value="Blink LED" onclick="page.blinkLed()">
+				<!-- <input type="button" value="Blink Pattern" onclick="page.changePattern()"> -->
+				<input type="button" value="Set Alert Threshold" onclick="page.changeThreshold()">
 			</div>
+
         </div>
 
-        <div>
-            <h4>Soil Moisture Level</h4>
-            <div class="chartRow" id="soilChart"></div>
+        <div class="chartsSection">
+			<div>
+            	<h4 class="chartHeader">
+					<div>
+						Light Level 
+						<span id="lightValue">0</span>
+					</div>
+					<div onclick="page.changeThreshold('light')">
+						Threshold
+						<span id="lightThreshold">0</span>
+					</div>
+				</h4>
+            	<div class="chartRow" id="lightChart"></div>
+			</div>
 
-            <h4>Light Level</h4>
-            <div class="chartRow" id="lightChart"></div>
+			<div>
+				<h4 class="chartHeader">
+					<div>
+						Soil Moisture Level 
+						<span id="soilValue">0</span>
+					</div>
+					<div onclick="page.changeThreshold('soil')">
+						Threshold
+						<span id="soilThreshold">0</span>
+					</div>
+				</h4>
+				<div class="chartRow" id="soilChart"></div>
+			</div>
+			
+			<div>
+            	<h4 class="chartHeader">
+					<div>
+						Temperature 
+						<span id="tempAvgValue">0</span>
+					</div>
+					<div onclick="page.changeThreshold('tempAvg')">
+						Threshold
+						<span id="tempAvgThreshold">0</span>
+					</div>
+				</h4>
+				<div class="chartRow" id="tempAvgChart"></div>
+			</div>
 
-            <h4>Temperature</h4>
-            <div class="chartRow" id="tempAvgChart"></div>
+			<div>
+            	<h4 class="chartHeader">
+					<div>
+						Humidity 
+						<span id="humidityValue">0</span>
+					</div>
+					<div onclick="page.changeThreshold('humidity')">
+						Threshold
+						<span id="humidityThreshold">0</span>
+					</div>
+				</h4>
+				<div class="chartRow" id="humidityChart"></div>
+			</div>
+
 		</div>
 		
 	</main>
