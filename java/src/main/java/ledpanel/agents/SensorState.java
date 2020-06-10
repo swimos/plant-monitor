@@ -21,6 +21,9 @@ public class SensorState extends AbstractAgent {
   @SwimLane("latest")
   ValueLane<Float> latest = this.<Float>valueLane();
 
+  @SwimLane("name")
+  ValueLane<String> name = this.<String>valueLane();
+
   @SwimLane("history")
   MapLane<Long, Float> history = this.<Long, Float>mapLane()
     .didUpdate((key, newValue, oldValue) -> {
@@ -37,6 +40,19 @@ public class SensorState extends AbstractAgent {
       }
     });
 
+  @SwimLane("setName")
+  CommandLane<Record> setNameCommand = this.<Record>commandLane()
+    .onCommand((newData) -> {
+      this.name.set(newData.get("sensorName").stringValue());
+      if(!isRegistered) {
+        String plantNode = String.format("/plant/%1$s", newData.get("plantId").stringValue());
+        // System.out.println(plantNode);
+        command(plantNode, "addSensor", newData.get("sensorId"));
+        this.isRegistered = true;
+      }
+
+    });
+
   @SwimLane("setLatest")
   CommandLane<Record> setLatestCommand = this.<Record>commandLane()
     .onCommand((newData) -> {
@@ -47,17 +63,12 @@ public class SensorState extends AbstractAgent {
       latest.set(newValue);
       history.put(now, newValue);
       shortHistory.put(now, newValue);
-      if(!isRegistered) {
-        String plantNode = String.format("/plant/%1$s", newData.get("plantId").stringValue());
-        // System.out.println(plantNode);
-        command(plantNode, "addSensor", newData.get("sensorId"));
-        this.isRegistered = true;
-      }
     });    
 
   @Override
   public void didStart() {
-    
+    // System.out.println("sensor started");
+    this.latest.set(0f);
   }  
   
 }

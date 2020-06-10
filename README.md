@@ -7,6 +7,10 @@ Application has three swim WebAgent types:
 * PlantState - WebAgent which monitors the state of a single plant. Registers to AggreagtionService on startup. There should be one PlantState agent per actual plant.
 * SensorState - WebAgent which tracks the state of a single sensor. Registers to a plant. Each plant can have several sensors and so several SensorState WebAgents
 
+Sensor data received by NodeJS which roues the data into Swim via command lanes. This could be replaced with a data simulator.
+
+![architechture](/ui/assets/images/dataflow-diagram.jpg)
+
 Web UI showing real time state of a single plant based on the agent structure decribed above.
 
 ![screenshot](/ui/assets/images/ui-screenshot.png)
