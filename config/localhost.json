@@ -1,0 +1,15 @@
+{
+    "plantInfo": {
+        "id": "desktop1",
+        "name": "Desktop Plant"
+    },
+    "swimAddress": "127.0.0.1",
+    "swimPort": "9001",
+    "showDebug": true,
+    "mainLoopInterval": 2000,
+    "arduino": {
+        "enabled": true,
+        "address": "/dev/ttyS3",
+        "baud": 115200
+    }
+}

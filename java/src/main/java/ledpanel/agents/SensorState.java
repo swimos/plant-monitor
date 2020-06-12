@@ -15,7 +15,7 @@ import java.util.TimerTask;
 public class SensorState extends AbstractAgent {
 
   private static final int HISTORY_SIZE = 5760;
-  private static final int SHORT_HISTORY_SIZE = 1440;
+  private static final int SHORT_HISTORY_SIZE = 200;
   private boolean isRegistered = false;
 
   @SwimLane("latest")

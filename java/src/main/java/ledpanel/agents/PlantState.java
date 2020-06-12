@@ -23,6 +23,7 @@ public class PlantState extends AbstractAgent {
   @SwimLane("createPlant")
   CommandLane<Value> createPlantCommand = this.<Value>commandLane()
     .onCommand(plantInfo -> {
+      System.out.println(plantInfo);
       this.info.set(plantInfo);
       command("/aggregationService", "addPlant", this.info.get());
     });
