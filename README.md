@@ -23,7 +23,7 @@ Starting the App for Development:
     * (Linux) ./gradlew run 
     * (Windows) .\gradlew.bat run
 
-The gradle wrapper will automatically pull down the correct version of Gradle and then build/run the app. One the app is running you will see "Running Swim Plant Montior Server..." in the console. You can now navigate to the main pages of the app in your browser:
+The gradle wrapper will automatically pull down the correct version of Gradle and then build/run the app. Once the app is running you will see "Running Swim Plant Montior Server..." in the console. You can now navigate to the main pages of the app in your browser:
 
 * Main: http://127.0.0.1:9001
 * Plant Sim: http://127.0.0.1:9001/sim.html
