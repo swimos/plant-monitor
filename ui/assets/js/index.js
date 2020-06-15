@@ -11,7 +11,7 @@ class PlantPage {
   sensorList = [];
   sensorListSynced = false;
 
-  tween = swim.Transition.duration(250);
+  tween = swim.Transition.duration(300);
 
   gaugePanel = null;
   mainGauge = null;

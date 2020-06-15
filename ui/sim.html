@@ -11,7 +11,8 @@
 	<link rel="icon" type="image/png" href="assets/favicon_x128.png">
 
 	<!-- styles -->
-	<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,500,600,700|Orbitron:400,500|Material+Icons" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,500,600,700|Orbitron:400,500|Material+Icons"
+		rel="stylesheet">
 	<link rel="stylesheet" href="assets/css/bootstrap.min.css" type="text/css">
 	<link rel="stylesheet" href="assets/css/main.css" type="text/css">
 
@@ -19,6 +20,8 @@
 	<script src="assets/js/lib/libgif.js"></script>
 	<script src="assets/js/lib/swim-system.js"></script>
 	<script src="assets/js/lib/default.js"></script>
+	<script src="assets/js/lib/names.js"></script>
+	<script src="assets/js/lib/plantNames.js"></script>
 	<script src="assets/js/sim.js"></script>
 
 	<script>
@@ -34,31 +37,143 @@
 
 <body class="page" onload="start()">
 	<header class="statusHeader" id="mainHeader">
-		<svg width="156px" height="68px" viewBox="0 0 156 68"><polygon fill="#008ac5" points="38.262415 60.577147 45.7497674 67.9446512 41.4336392 66.3395349"></polygon><polygon fill="#004868" points="30.6320304 56.7525259 35.7395349 55.9824716 41.4304178 66.3390957"></polygon><polygon fill="#1db0ef" points="45.8577521 43.5549215 35.7395349 55.9813953 30.895331 54.807418"></polygon><polygon fill="#008ac5" points="45.8604651 43.5549215 41.760398 48.5902277 50.5169298 42.7788873"></polygon><polygon fill="#008ac5" points="26.3271825 57.4036063 35.7395349 55.9813953 19.2251161 51.7639132"></polygon><polygon fill="#008ac5" points="21.8522892 56.6610604 26.3302326 57.4059108 24.8674419 60.4330233"></polygon><polygon fill="#46c7ff" points="25.8602519 50.1512126 21.9749543 52.4673682 26.296682 53.5765239"></polygon><polygon fill="#004868" points="8.22304588 54.4 26.3302326 57.4046512 10.7431892 45.0311035"></polygon><polygon fill="#008ac5" points="13.8293387 33.5634807 4.10372093 35.5972093 8.22325581 54.4"></polygon><polygon fill="#004868" points="8.22099482 54.4011969 0.0941817913 35.6005706 4.10375191 35.6005706"></polygon><polygon fill="#004a6a" points="29.0049687 26.1913296 29.4164365 29.8907151 13.8293023 33.5651163 4.10372093 35.5972093"></polygon><polygon fill="#46c7ff" points="29.0062121 26.1911555 4.10372093 35.5972093 18.5813833 12.4933152"></polygon><polygon fill="#008ac5" points="11.2792478 19.5948645 18.5832775 12.4930233 4.10372093 35.5972093"></polygon><polygon fill="#0076a9" points="0.0976972893 35.6005706 11.6715695 18.9158345 4.10403655 35.6005706"></polygon><polygon fill="#46c7ff" points="24.2487055 31.1058385 29.4139535 29.8876265 26.2195349 45.5916279"></polygon><polygon fill="#004868" points="34.5718675 26.2202296 36.2830885 37.7346648 31.9099624 28.1109897"></polygon><polygon fill="#00557a" points="29.0034364 26.1884581 42.3712871 20.6741037 29.4139535 29.8883721"></polygon><polygon fill="#008ac5" points="26.68 13.7746077 29.0062121 26.1911555 18.5813953 12.4930233"></polygon><polygon fill="#004868" points="11.6715695 2.42510699 18.5775948 12.4930233 11.083087 19.8858773"></polygon><polygon fill="#46c7ff" points="9.61188076 0 26.6831512 13.7746077 18.5788496 12.4908901"></polygon><path fill="#0076a9" d="M26.6778731,13.7746077 L38.8232486,18.8943879 L37.5870837,22.6477526 L29.0035088,26.187907 L26.6778731,13.7746077 Z M35.3244186,20.5976744 C35.7065226,20.5976744 36.0162791,20.2879179 36.0162791,19.905814 C36.0162791,19.52371 35.7065226,19.2139535 35.3244186,19.2139535 C34.9423146,19.2139535 34.6325581,19.52371 34.6325581,19.905814 C34.6325581,20.2879179 34.9423146,20.5976744 35.3244186,20.5976744 Z"></path><polygon fill="#46c7ff" points="38.8232558 18.9003694 64.0007929 11.9315264 37.5863839 22.647813"></polygon><text fill="#ffffff" style="font-family: Orbitron; font-size: 32px;"><tspan x="58" y="42">swim</tspan></text></svg>			
+		<svg width="156px" height="68px" viewBox="0 0 156 68">
+			<polygon fill="#008ac5" points="38.262415 60.577147 45.7497674 67.9446512 41.4336392 66.3395349"></polygon>
+			<polygon fill="#004868" points="30.6320304 56.7525259 35.7395349 55.9824716 41.4304178 66.3390957">
+			</polygon>
+			<polygon fill="#1db0ef" points="45.8577521 43.5549215 35.7395349 55.9813953 30.895331 54.807418"></polygon>
+			<polygon fill="#008ac5" points="45.8604651 43.5549215 41.760398 48.5902277 50.5169298 42.7788873"></polygon>
+			<polygon fill="#008ac5" points="26.3271825 57.4036063 35.7395349 55.9813953 19.2251161 51.7639132">
+			</polygon>
+			<polygon fill="#008ac5" points="21.8522892 56.6610604 26.3302326 57.4059108 24.8674419 60.4330233">
+			</polygon>
+			<polygon fill="#46c7ff" points="25.8602519 50.1512126 21.9749543 52.4673682 26.296682 53.5765239"></polygon>
+			<polygon fill="#004868" points="8.22304588 54.4 26.3302326 57.4046512 10.7431892 45.0311035"></polygon>
+			<polygon fill="#008ac5" points="13.8293387 33.5634807 4.10372093 35.5972093 8.22325581 54.4"></polygon>
+			<polygon fill="#004868" points="8.22099482 54.4011969 0.0941817913 35.6005706 4.10375191 35.6005706">
+			</polygon>
+			<polygon fill="#004a6a"
+				points="29.0049687 26.1913296 29.4164365 29.8907151 13.8293023 33.5651163 4.10372093 35.5972093">
+			</polygon>
+			<polygon fill="#46c7ff" points="29.0062121 26.1911555 4.10372093 35.5972093 18.5813833 12.4933152">
+			</polygon>
+			<polygon fill="#008ac5" points="11.2792478 19.5948645 18.5832775 12.4930233 4.10372093 35.5972093">
+			</polygon>
+			<polygon fill="#0076a9" points="0.0976972893 35.6005706 11.6715695 18.9158345 4.10403655 35.6005706">
+			</polygon>
+			<polygon fill="#46c7ff" points="24.2487055 31.1058385 29.4139535 29.8876265 26.2195349 45.5916279">
+			</polygon>
+			<polygon fill="#004868" points="34.5718675 26.2202296 36.2830885 37.7346648 31.9099624 28.1109897">
+			</polygon>
+			<polygon fill="#00557a" points="29.0034364 26.1884581 42.3712871 20.6741037 29.4139535 29.8883721">
+			</polygon>
+			<polygon fill="#008ac5" points="26.68 13.7746077 29.0062121 26.1911555 18.5813953 12.4930233"></polygon>
+			<polygon fill="#004868" points="11.6715695 2.42510699 18.5775948 12.4930233 11.083087 19.8858773"></polygon>
+			<polygon fill="#46c7ff" points="9.61188076 0 26.6831512 13.7746077 18.5788496 12.4908901"></polygon>
+			<path fill="#0076a9"
+				d="M26.6778731,13.7746077 L38.8232486,18.8943879 L37.5870837,22.6477526 L29.0035088,26.187907 L26.6778731,13.7746077 Z M35.3244186,20.5976744 C35.7065226,20.5976744 36.0162791,20.2879179 36.0162791,19.905814 C36.0162791,19.52371 35.7065226,19.2139535 35.3244186,19.2139535 C34.9423146,19.2139535 34.6325581,19.52371 34.6325581,19.905814 C34.6325581,20.2879179 34.9423146,20.5976744 35.3244186,20.5976744 Z">
+			</path>
+			<polygon fill="#46c7ff" points="38.8232558 18.9003694 64.0007929 11.9315264 37.5863839 22.647813"></polygon>
+			<text fill="#ffffff" style="font-family: Orbitron; font-size: 32px;">
+				<tspan x="58" y="42">swim</tspan>
+			</text>
+		</svg>
 		Plant Sim
 	</header>
-	<main class="main" id="main">
-		<div>
+	<main class="main sim" id="main">
+		<div class="plantList">
 			<h4>Plant List</h4>
 			<div id="plantListingDiv">
 
 			</div>
 		</div>
 		<div>
-			<h4>plant data?</h4>
+			<svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+				x="0px" y="0px" viewBox="0 0 512 512" class="plantSvg" xml:space="preserve">
+				<g id="plantLeaves">
+					<path style="fill:#80C56E;" type="light" d="M408.906,45.536c2.263,6.186,27.401,79.804-24.155,166.617
+		   c-31.315,52.729-78.861,56.218-83.517,56.434c-2.727-3.781-29.57-43.179-7.763-100.497
+		   C329.376,73.721,402.655,47.612,408.906,45.536z" />
+					<path style="fill:#66AD66;" type="dark" d="M408.906,45.536L301.234,268.587l0,0c4.657-0.217,52.202-3.705,83.517-56.434
+		   C436.308,125.34,411.169,51.722,408.906,45.536z" />
+					<path style="fill:#80C56E;" type="light"
+						d="M103.094,45.536c-2.263,6.186-27.401,79.804,24.155,166.617
+		   c31.315,52.729,78.861,56.218,83.517,56.434c2.727-3.781,29.57-43.179,7.762-100.497C182.624,73.721,109.345,47.612,103.094,45.536z" />
+					<path style="fill:#66AD66;" type="dark" d="M218.528,168.09C182.624,73.721,109.345,47.612,103.094,45.536
+		   c63.67,121.61,98.013,199.506,107.934,222.682C214.849,262.756,239.774,223.93,218.528,168.09z" />
+					<path style="fill:#80C56E;" type="light" d="M256,0c-7.676,7.449-96.408,97.362-82.296,260.712c8.571,99.218,75.639,137.883,82.296,141.487
+		   c6.657-3.604,73.725-42.27,82.296-141.487C352.408,97.362,263.676,7.449,256,0z" />
+					<path style="fill:#66AD66;" type="dark"
+						d="M256,0v402.199c6.657-3.604,73.725-42.27,82.296-141.487C352.408,97.362,263.676,7.449,256,0z" />
+					<path style="fill:#80C56E;" type="light" d="M445.966,250.043c16.695-57.379,11.044-110.709,11.044-110.709s-32.151,14.322-112.949,66.535
+		   C281.256,246.454,261.824,317.612,256,336.79h73.813C383.468,336.79,430.976,301.562,445.966,250.043z" />
+					<path style="fill:#66AD66;" type="dark" d="M457.011,139.333c0,0-83.039,164.043-201.011,197.457h73.813c53.656,0,101.163-35.228,116.154-86.747
+		   C462.661,192.664,457.011,139.333,457.011,139.333z" />
+					<path style="fill:#80C56E;" type="light" d="M66.034,250.043C49.339,192.664,54.99,139.334,54.99,139.334s32.151,14.322,112.949,66.535
+		   C230.744,246.454,250.176,317.612,256,336.79h-73.813C128.532,336.79,81.024,301.562,66.034,250.043z" />
+					<path style="fill:#66AD66;" type="dark" d="M256,336.79c-5.824-19.178-25.256-90.336-88.061-130.922c-80.799-52.213-112.95-66.535-112.95-66.535
+		   S138.028,303.377,256,336.79z" />
+				</g>
+				<g>
+					<path style="fill:#FEC37D;" d="M309.376,512H202.624c-28.315,0-52.604-20.189-57.781-48.027l-22.887-123.072h268.089
+		   l-22.887,123.072C361.98,491.811,337.691,512,309.376,512z" />
+					<path style="fill:#F9AE5D;" d="M338.192,340.902l-22.887,123.072C310.128,491.811,285.838,512,257.523,512h51.853
+		   c28.315,0,52.604-20.189,57.781-48.027l22.887-123.072h-51.852V340.902z" />
+					<path style="fill:#F2A559;" d="M394.718,368.559H117.282c-11.242,0-20.356-9.114-20.356-20.356l0,0
+		   c0-11.242,9.114-20.356,20.356-20.356h277.437c11.242,0,20.356,9.114,20.356,20.356l0,0
+		   C415.074,359.445,405.961,368.559,394.718,368.559z" />
+					<path style="fill:#EA8F3D;" d="M394.718,327.846h-32.614v40.712h32.614c11.242,0,20.356-9.114,20.356-20.356l0,0
+		   C415.075,336.96,405.961,327.846,394.718,327.846z" />
+				</g>
+			</svg>
+		</div>
+		<div>
+			<h4 id="plantDataHeader">plant data?</h4>
 			<form method="POST" action="javascript:void(0)" onsubmit="page.handleSubmit(this)">
-				ID: <input type="text" name="plantIdValue" id="plantIdValue" value="" required minlength="4" maxlength="30" size="10"><br>
-				Name: <input type="text" name="plantNameValue" id="plantNameValue" value="" required minlength="4" maxlength="30" size="10"><br>
-				light: <input type="number" name="lightValue" id="lightValue" value="0" size="4"><br>
-				soil: <input type="number" name="soilValue" id="soilValue" value="0" size="4"><br>
-				temp: <input type="number" name="tempAvgValue" id="tempAvgValue" value="0" size="4"><br>
-				Humidity: <input type="number" name="humidityValue" id="humidityValue" value="0" size="4"><br>
-				Pressure: <input type="number" name="pressureValue" id="pressureValue" value="0" size="4"><br>
-				<input type="submit">
+				<input type="hidden" name="plantIdValue" id="plantIdValue" value="">
+				<input type="hidden" name="plantNameValue" id="plantNameValue" value="">
+				<div class="plantControls">
+					<div>Light:</div>
+					<div class="plantInputs">
+						<input type="number" name="lightValue" id="lightValue" value="0" size="4">
+						<input type="range" name="lightRange" id="lightRange" value="0" min="0" max="100"
+							oninput="page.handleRangeUpdate(this)">
+					</div>
+
+					<div>Soil:</div>
+					<div class="plantInputs">
+						<input type="number" name="soilValue" id="soilValue" value="0" size="4">
+						<input type="range" name="soilRange" id="soilRange" value="0" min="0" max="100"
+							oninput="page.handleRangeUpdate(this)">
+					</div>
+
+					<div>Temp:</div>
+					<div class="plantInputs">
+						<input type="number" name="tempAvgValue" id="tempAvgValue" value="0" size="4">
+						<input type="range" name="tempAvgRange" id="tempAvgRange" value="0" min="0" max="100"
+							oninput="page.handleRangeUpdate(this)">
+					</div>
+
+					<div>Humidity:</div>
+					<div class="plantInputs">
+						<input type="number" name="humidityValue" id="humidityValue" value="0" size="4">
+						<input type="range" name="humidityRange" id="humidityRange" value="0" min="0" max="100"
+							oninput="page.handleRangeUpdate(this)">
+					</div>
+
+					<div>Pressure:</div>
+					<div class="plantInputs">
+						<input type="number" name="pressureValue" id="pressureValue" value="0" size="4">
+						<input type="range" name="pressureRange" id="pressureRange" value="0" min="0" max="1100"
+							oninput="page.handleRangeUpdate(this)">
+					</div>
+
+				</div>
+				<input type="submit" value="Create Plant" id="createPlantButton">
 			</form>
 
 		</div>
-		
+
 	</main>
 	<!-- /main -->
 
