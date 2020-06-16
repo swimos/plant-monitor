@@ -5,6 +5,8 @@ const ArduinoBoard = require('./modules/ArduinoBoard');
 // include SWIM client
 const swimClient = require('@swim/client');
 
+const WebSocketClient = require('websocket').client;
+
 const https = require('https')
 
 // grab command line argumenets
@@ -16,6 +18,33 @@ class Main {
         this.args = {};
         this.processCommandLineArgs();
         this.loadConfig(this.args.config || 'localhost');
+
+        this.websocket = new WebSocketClient();
+
+        this.websocket.on('connectFailed', (error) => {
+            console.log('Connect Error: ' + error.toString());
+        });
+         
+        this.websocket.on('connect', (connection) => {
+            console.log('WebSocket Client Connected');
+            connection.on('error', (error) => {
+                console.log("Connection Error: " + error.toString());
+            });
+            connection.on('close', () => {
+                console.log('echo-protocol Connection Closed');
+                // wait half second and reconnect
+                setTimeout(() => {
+                    this.openSocket();
+                }, 500);
+            });
+            connection.on('message', (message) => {
+                if (message.type === 'utf8') {
+                    // console.log("Received: '" + message.utf8Data + "'");
+                    this.handleSocketMessage(message.utf8Data);
+                }
+            });
+
+        });        
 
         this.swimPort = this.config.swimPort;
         this.swimAddress = this.config.swimAddress;
@@ -36,36 +65,112 @@ class Main {
         this.dataChanged = false;
 
         this.endPointUriLookup = {};
+
+        this.msgBuffer = '';
+        this.msgFirstChar = null;
     }
 
 
     start() {
 
-        // reigster new plant with Swim Server
-        swimClient.command(this.swimUrl, `/plant/${this.plantInfo.id}`, 'createPlant', this.plantInfo);
+        this.httpRequest('/v2/notification/callback', '', 'DELETE', (result) => {
+            console.info("delete /v2/notification/callback result:", result);
+        });
+
+        this.httpRequest('/v2/notification/pull', '', 'DELETE', (result) => {
+            console.info("delete /v2/notification/pull result:", result);
+        });
+
+        this.httpRequest('/v2/notification/websocket', '', 'DELETE', (result) => {
+            console.info("delete /v2/notification/websocket result:", result);
+        });
+
+        this.httpRequest('/v2/notification/websocket', '', 'PUT', (result) => {
+            console.info("create socket requst result:", result);
+            this.openSocket();
+        });
 
         
-        // this.deleteActiveSubscriptions(this.deviceId);
 
-        // console.info(this.config.endpoints)
+        this.getDeviceList();
 
+        this.mainLoop();
+    }
+
+    openSocket() {
+        var headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.authtoken}`
+        }
+        this.websocket.connect(`wss://${this.apiUrl}/v2/notification/websocket-connect`, null, null, headers);
+
+    }
+    
+    getDeviceList() {
+        console.info('[main] getDeviceList');
+        this.httpRequest('/v3/devices', '', 'GET', (result) => {
+
+            let firstChar = result.charAt(0);
+            let lastChar = result.charAt(result.length-1);
+            let resultData = null
+
+            if(firstChar === '{' &&  lastChar === '}') {
+                console.info("Device list loaded without buffering");
+                resultData = JSON.parse(result);
+                this.deviceList = resultData.data;
+                this.loadDevices();
+            } else {
+                this.msgBuffer += result;
+                let firstChar = this.msgBuffer.charAt(0);
+                let lastChar = this.msgBuffer.charAt(this.msgBuffer.length-1);
+
+                if(firstChar === '{' &&  lastChar === '}') {
+                    console.info("Device list loaded by buffering messages");
+                    resultData = JSON.parse(this.msgBuffer);
+                    this.deviceList = resultData.data;
+                    this.msgBuffer = '';
+                    this.loadDevices();
+                }
+    
+            }
+
+        });
+
+    }    
+
+    loadDevices() {
+        // console.info(this.deviceList);
+        for(let device of this.deviceList) {
+
+            swimClient.command(this.swimUrl, `/plant/${device.endpoint_name}`, 'createPlant', device);
+            console.info(this.swimUrl, `/plant/${device.endpoint_name}`, 'createPlant', device);
+            // if(device.state === "registered") {
+
+                this.deleteActiveSubscriptions(device.endpoint_name);
+                this.subscribeToDeviceEndpoints(device.endpoint_name);
+            // } else {
+            //     console.info(`Device ${device.endpoint_name} not registered`);
+            // }
+        }        
+    }
+
+    subscribeToDeviceEndpoints(deviceId) {
+        // sub to endpoints
         for(const index in this.config.endpoints) {
             const endpoint = this.config.endpoints[index]
             // console.info(endpoint);
             if(endpoint.enabled) {
                 this.endPointUriLookup[endpoint.subscription.uri] = endpoint;
-                this.subscribeToEndpoint(this.deviceId, endpoint.subscription);
+                this.subscribeToEndpoint(deviceId, endpoint.subscription);
                 const msg = {
-                    plantId: this.plantInfo.id,
+                    plantId: deviceId,
                     sensorName: endpoint.name,
                     sensorId: endpoint.lane
                 }
-                swimClient.command(this.swimUrl, `/sensor/${this.plantInfo.id}/${endpoint.lane}`, 'setName', msg);            
+                swimClient.command(this.swimUrl, `/sensor/${deviceId}/${endpoint.lane}`, 'setName', msg);            
     
             }
-        }
-
-        this.mainLoop();
+        }        
     }
 
     mainLoop() {
@@ -77,23 +182,23 @@ class Main {
             clearTimeout(this.loopTimeout);
         }
 
-        this.pullNotifications();
+        // this.pullNotifications();
 
-        if(this.sensorData !== null && this.dataChanged) {
-            swimClient.command(this.swimUrl, `/plant/${this.plantInfo.id}`, 'setSensorData', this.sensorData);
-            for (let sensorKey in this.sensorData) {
-                // console.info(this.swimUrl, `/sensor/${this.plantInfo.id}/${sensorKey}`, 'setLatest', this.sensorData[sensorKey]);
-                const msg = {
-                    plantId: this.plantInfo.id,
-                    sensorId: sensorKey,
-                    sensorData: this.sensorData[sensorKey]
-                }
-                // console.info(this.swimUrl, `/sensor/${this.plantInfo.id}/${sensorKey}`, 'setLatest', msg);
-                swimClient.command(this.swimUrl, `/sensor/${this.plantInfo.id}/${sensorKey}`, 'setLatest', msg);
-            }
+        // if(this.sensorData !== null && this.dataChanged) {
+        //     swimClient.command(this.swimUrl, `/plant/${this.plantInfo.id}`, 'setSensorData', this.sensorData);
+        //     for (let sensorKey in this.sensorData) {
+        //         console.info(this.swimUrl, `/sensor/${this.plantInfo.id}/${sensorKey}`, 'setLatest', this.sensorData[sensorKey]);
+        //         const msg = {
+        //             plantId: this.plantInfo.id,
+        //             sensorId: sensorKey,
+        //             sensorData: this.sensorData[sensorKey]
+        //         }
+        //         // console.info(this.swimUrl, `/sensor/${this.plantInfo.id}/${sensorKey}`, 'setLatest', msg);
+        //         swimClient.command(this.swimUrl, `/sensor/${this.plantInfo.id}/${sensorKey}`, 'setLatest', msg);
+        //     }
             
-            this.dataChanged = false;
-        } 
+        //     this.dataChanged = false;
+        // } 
 
         this.loopTimeout = setTimeout(this.mainLoop.bind(this), this.loopInterval);
     }
@@ -106,9 +211,15 @@ class Main {
     }    
 
     subscribeToEndpoint(endpointName, endpoint) {
-        console.info('[main] subscribeToEndpoint', endpointName, endpoint);
+        // console.info('[main] subscribeToEndpoint', endpointName, endpoint);
         this.httpRequest(`/v2/subscriptions/${endpointName}${endpoint.uri}`, '', 'PUT', (result) => {
-            if(result !== "NOT_CONNECTED" && result !== "QUEUE_IS_FULL" && result !== "LIMITS_EXCEEDED") {
+
+            let firstChar = result.charAt(0);
+            let lastChar = result.charAt(result.length-1);
+
+            if(firstChar === '{' &&  lastChar === '}') {
+
+            // if(result !== "NOT_CONNECTED" && result !== "QUEUE_IS_FULL" && result !== "LIMITS_EXCEEDED" && result !== "URI_PATH_DOES_NOT_EXISTS") {
                 const resultData = JSON.parse(result);
                 const newId = resultData['async-response-id'];
                 this.asyncIds[newId] = {
@@ -118,6 +229,12 @@ class Main {
                 }
 
                 this.getResourceValue(endpointName, newId, endpoint.uri);
+
+                const currEndpoint = this.endPointUriLookup[endpoint.uri];
+                swimClient.command(this.swimUrl, `/sensor/${endpointName}/${currEndpoint.lane}`, 'setLatest', {sensorData: 0});
+
+                // console.info(this.swimUrl, `/sensor/${endpointName}/${currEndpoint.lane}`, 'setLatest', {sensorData: 0});
+
                 
             } else {
                 console.info(`Device ${endpointName} not connected or connection error`);
@@ -132,19 +249,22 @@ class Main {
     getResourceValue(endpointName, asyncId, uri) {
         const msg = `{"method": "GET", "uri": "${uri}"}`;
         this.httpRequest(`/v2/device-requests/${endpointName}?async-id=${asyncId}`, msg, 'POST', (result) => {
-            console.info(result);
+            // console.info(result);
         });
     }    
 
-    pullNotifications() {
-        this.httpRequest(`/v2/notification/pull`, null, 'GET', (result) => {
-            if(result !== "CONCURRENT_PULL_REQUEST_RECEIVED") {
+    handleSocketMessage(result) {
+            if(result !== "CONCURRENT_PULL_REQUEST_RECEIVED" && result !== "URI_PATH_DOES_NOT_EXISTS") {
                 try {
                     const resultData = JSON.parse(result);
                     // console.info(resultData);
                     if(resultData.notifications) {
                         this.parseNotifications(resultData.notifications);
-                      
+                    } else if(resultData.registrations) {
+                        console.info("new device(s) registered");
+                        this.getDeviceList();
+                        // this.parseNotifications(resultData.notifications);
+                          
                     } else {
                         const asyncNotifs = resultData[Object.keys(resultData)[0]];
                         // console.info(asyncNotifs);
@@ -154,9 +274,12 @@ class Main {
                             if(receiver && currNotif.payload) {
                                 const data = Buffer.from(currNotif.payload, 'base64').toString('utf-8');
                                 console.info(receiver.uri, data);
-                                const currEndpoint = this.endPointUriLookup[receiver.uri];
-                                this.sensorData[currEndpoint.lane] = data;
-                                this.dataChanged = true;
+
+                                const currEndpoint = this.endPointUriLookup[msg.path];
+                                swimClient.command(this.swimUrl, `/sensor/${currNotif.ep}/${currEndpoint.lane}`, 'setLatest', {sensorData: data});
+                
+                                console.info(this.swimUrl, `/sensor/${currNotif.ep}/${currEndpoint.lane}`, 'setLatest', {sensorData: data});
+                                
 
                             }
                         }
@@ -168,9 +291,9 @@ class Main {
                 
               
             } else {
-                // console.info(result)
+                console.info(result)
             }
-        });
+
     }
 
     parseNotifications(notifications) {
@@ -178,8 +301,11 @@ class Main {
             if(msg.path) {
                 const data = Buffer.from(msg.payload, 'base64').toString('utf-8');
                 const currEndpoint = this.endPointUriLookup[msg.path];
-                this.sensorData[currEndpoint.lane] = data;
-                this.dataChanged = true;
+                swimClient.command(this.swimUrl, `/sensor/${msg.ep}/${currEndpoint.lane}`, 'setLatest', {sensorData: data});
+
+                // console.info(this.swimUrl, `/sensor/${msg.ep}/${currEndpoint.lane}`, 'setLatest', {sensorData: data});
+                // this.sensorData[currEndpoint.lane] = data;
+                // this.dataChanged = true;
             } else {
                 console.info('no receiver', msg);
 
@@ -196,7 +322,7 @@ class Main {
             method: type,
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': this.authtoken
+                'Authorization': `Bearer ${this.authtoken}`
             }
         }
 
