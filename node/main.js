@@ -54,6 +54,7 @@ class Main {
         this.authtoken = this.config.authToken;
         this.apiUrl = this.config.apiUrl;
         this.deviceId = this.config.deviceId;
+        this.deviceLookup = [];
 
         this.plantInfo = this.config.plantInfo;
 
@@ -94,7 +95,7 @@ class Main {
 
         this.getDeviceList();
 
-        this.mainLoop();
+        // this.mainLoop();
     }
 
     openSocket() {
@@ -142,15 +143,19 @@ class Main {
         // console.info(this.deviceList);
         for(let device of this.deviceList) {
 
-            swimClient.command(this.swimUrl, `/plant/${device.endpoint_name}`, 'createPlant', device);
-            console.info(this.swimUrl, `/plant/${device.endpoint_name}`, 'createPlant', device);
-            // if(device.state === "registered") {
+            if(this.deviceLookup.indexOf(device.id) === -1) {
+                swimClient.command(this.swimUrl, `/plant/${device.endpoint_name}`, 'createPlant', device);
+                // console.info(this.swimUrl, `/plant/${device.endpoint_name}`, 'createPlant', device);
+                // if(device.state === "registered") {
 
-                this.deleteActiveSubscriptions(device.endpoint_name);
-                this.subscribeToDeviceEndpoints(device.endpoint_name);
-            // } else {
-            //     console.info(`Device ${device.endpoint_name} not registered`);
-            // }
+                    this.deleteActiveSubscriptions(device.endpoint_name);
+                    this.subscribeToDeviceEndpoints(device.endpoint_name);
+                // } else {
+                //     console.info(`Device ${device.endpoint_name} not registered`);
+                // }
+                this.deviceLookup.push(device.id);
+            }
+            // console.info('device', device);
         }        
     }
 
@@ -165,8 +170,9 @@ class Main {
                 const msg = {
                     plantId: deviceId,
                     sensorName: endpoint.name,
-                    sensorId: endpoint.lane
-                }
+                    sensorId: endpoint.lane,
+                    resourcePath: endpoint.subscription.uri
+                }            
                 swimClient.command(this.swimUrl, `/sensor/${deviceId}/${endpoint.lane}`, 'setName', msg);            
     
             }
@@ -181,24 +187,6 @@ class Main {
         if (this.loopTimeout !== null) {
             clearTimeout(this.loopTimeout);
         }
-
-        // this.pullNotifications();
-
-        // if(this.sensorData !== null && this.dataChanged) {
-        //     swimClient.command(this.swimUrl, `/plant/${this.plantInfo.id}`, 'setSensorData', this.sensorData);
-        //     for (let sensorKey in this.sensorData) {
-        //         console.info(this.swimUrl, `/sensor/${this.plantInfo.id}/${sensorKey}`, 'setLatest', this.sensorData[sensorKey]);
-        //         const msg = {
-        //             plantId: this.plantInfo.id,
-        //             sensorId: sensorKey,
-        //             sensorData: this.sensorData[sensorKey]
-        //         }
-        //         // console.info(this.swimUrl, `/sensor/${this.plantInfo.id}/${sensorKey}`, 'setLatest', msg);
-        //         swimClient.command(this.swimUrl, `/sensor/${this.plantInfo.id}/${sensorKey}`, 'setLatest', msg);
-        //     }
-            
-        //     this.dataChanged = false;
-        // } 
 
         this.loopTimeout = setTimeout(this.mainLoop.bind(this), this.loopInterval);
     }
@@ -218,8 +206,6 @@ class Main {
             let lastChar = result.charAt(result.length-1);
 
             if(firstChar === '{' &&  lastChar === '}') {
-
-            // if(result !== "NOT_CONNECTED" && result !== "QUEUE_IS_FULL" && result !== "LIMITS_EXCEEDED" && result !== "URI_PATH_DOES_NOT_EXISTS") {
                 const resultData = JSON.parse(result);
                 const newId = resultData['async-response-id'];
                 this.asyncIds[newId] = {
@@ -233,11 +219,8 @@ class Main {
                 const currEndpoint = this.endPointUriLookup[endpoint.uri];
                 swimClient.command(this.swimUrl, `/sensor/${endpointName}/${currEndpoint.lane}`, 'setLatest', {sensorData: 0});
 
-                // console.info(this.swimUrl, `/sensor/${endpointName}/${currEndpoint.lane}`, 'setLatest', {sensorData: 0});
-
-                
             } else {
-                console.info(`Device ${endpointName} not connected or connection error`);
+                console.info(`Endpoint ${endpointName} for ${endpoint.uri} had a connection error`);
                 console.info(result);
             }
 
@@ -267,15 +250,16 @@ class Main {
                           
                     } else {
                         const asyncNotifs = resultData[Object.keys(resultData)[0]];
-                        // console.info(asyncNotifs);
+                        console.info('not parsed', result);
                         for(let i=0; i<asyncNotifs.length; i++) {
                             const currNotif = asyncNotifs[i];
                             const receiver = (this.asyncIds[currNotif.id]);
                             if(receiver && currNotif.payload) {
                                 const data = Buffer.from(currNotif.payload, 'base64').toString('utf-8');
-                                console.info(receiver.uri, data);
+                                console.info('async notif', receiver.uri, currNotif);
 
                                 const currEndpoint = this.endPointUriLookup[msg.path];
+                                
                                 swimClient.command(this.swimUrl, `/sensor/${currNotif.ep}/${currEndpoint.lane}`, 'setLatest', {sensorData: data});
                 
                                 console.info(this.swimUrl, `/sensor/${currNotif.ep}/${currEndpoint.lane}`, 'setLatest', {sensorData: data});
@@ -300,8 +284,14 @@ class Main {
         for(let msg of notifications) {
             if(msg.path) {
                 const data = Buffer.from(msg.payload, 'base64').toString('utf-8');
+                // console.info(msg.path, this.endPointUriLookup)
                 const currEndpoint = this.endPointUriLookup[msg.path];
-                swimClient.command(this.swimUrl, `/sensor/${msg.ep}/${currEndpoint.lane}`, 'setLatest', {sensorData: data});
+                if(currEndpoint) {
+                    swimClient.command(this.swimUrl, `/sensor/${msg.ep}/${currEndpoint.lane}`, 'setLatest', {sensorData: data});
+                } else {
+                    console.info("end point not found in lookup:", msg.ep, msg.path);
+                }
+                
 
                 // console.info(this.swimUrl, `/sensor/${msg.ep}/${currEndpoint.lane}`, 'setLatest', {sensorData: data});
                 // this.sensorData[currEndpoint.lane] = data;

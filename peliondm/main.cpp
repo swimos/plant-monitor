@@ -27,28 +27,77 @@ void fake_button_press() {
 }
 
 void light_change() {
-    int v = light_res->get_value_int() + 1;
+    int newDiff = rand() % 5 + 1;
+    int v = 0;
+    if((rand() % 2) == 1) {
+            v = light_res->get_value_int() + newDiff;
+    } else {
+            v = light_res->get_value_int() - newDiff;
+    }
+    if(v > 100 || v < 0) {
+        v = 50;
+    }
     light_res->set_value(v);
     printf("light change to: %d \n", v);
 }
 
 void soil_change() {
-    int v = soil_res->get_value_int() + 1;
+    int newDiff = rand() % 5 + 1;
+    int v = 0;
+    if((rand() % 2) == 1) {
+            v = soil_res->get_value_int() + newDiff;
+    } else {
+            v = soil_res->get_value_int() - newDiff;
+    }
+    if(v > 100 || v < 0) {
+        v = 50;
+    }
+
     soil_res->set_value(v);
     printf("soil change to: %d \n", v);
 }
 void temp_change() {
-    int v = temp_res->get_value_int() + 1;
+    int newDiff = rand() % 5 + 1;
+    int v = 0;
+    if((rand() % 2) == 1) {
+            v = temp_res->get_value_int() + newDiff;
+    } else {
+            v = temp_res->get_value_int() - newDiff;
+    }
+    if(v > 100 || v < 0) {
+        v = 50;
+    }
+
     temp_res->set_value(v);
     printf("temp change to: %d \n", v);
 }
 void humidity_change() {
-    int v = humidity_res->get_value_int() + 1;
-    humidity_res->set_value(v);
+    int newDiff = rand() % 5 + 1;
+    int v = 0;
+    if((rand() % 2) == 1) {
+            v = humidity_res->get_value_int() + newDiff;
+    } else {
+            v = humidity_res->get_value_int() - newDiff;
+    }
+    if(v > 100 || v < 0) {
+        v = 50;
+    }
+
+    humidity_res->set_value(v);    
     printf("humidity change to: %d \n", v);
 }
 void pressure_change() {
-    int v = pressure_res->get_value_int() + 1;
+    int newDiff = rand() % 5 + 1;
+    int v = 0;
+    if((rand() % 2) == 1) {
+            v = pressure_res->get_value_int() + newDiff;
+    } else {
+            v = pressure_res->get_value_int() - newDiff;
+    }
+    if(v > 100 || v < 0) {
+        v = 50;
+    }
+
     pressure_res->set_value(v);
     printf("pressure change to: %d \n", v);
 }
@@ -163,23 +212,31 @@ int main() {
     blink_res->attach_post_callback(mbed_event_queue()->event(blink_callback));
 
     light_res = client.create_resource("/3203/0/5510", "light_level");
-    light_res->set_value(0);
+    light_res->set_value(50);
     light_res->methods(M2MMethod::GET);
     light_res->observable(true);
     light_res->attach_notification_callback(light_callback);
     
 
     soil_res = client.create_resource("/3203/0/5511", "soil_level");
-    soil_res->set_value(0);
+    soil_res->set_value(50);
     soil_res->methods(M2MMethod::GET);
     soil_res->observable(true);
 
     temp_res = client.create_resource("/3203/0/5512", "temp_level");
-    temp_res->set_value(0);
+    temp_res->set_value(50);
     temp_res->methods(M2MMethod::GET);
     temp_res->observable(true);
 
+    pressure_res = client.create_resource("/3203/0/5513", "pressure_level");
+    pressure_res->set_value(1000);
+    pressure_res->methods(M2MMethod::GET);
+    pressure_res->observable(true);
 
+    humidity_res = client.create_resource("/3203/0/5514", "humidity_level");
+    humidity_res->set_value(1000);
+    humidity_res->methods(M2MMethod::GET);
+    humidity_res->observable(true);
 
     // Callback that fires when registering is complete
     client.on_registered(&registered);

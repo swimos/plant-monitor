@@ -18,7 +18,7 @@ public class PlantState extends AbstractAgent {
   ValueLane<Value> info = this.<Value>valueLane();
 
   @SwimLane("sensorList")
-  MapLane<String, String> sensorList = this.<String, String>mapLane();
+  MapLane<String, Value> sensorList = this.<String, Value>mapLane();
 
   @SwimLane("createPlant")
   CommandLane<Value> createPlantCommand = this.<Value>commandLane()
@@ -30,8 +30,9 @@ public class PlantState extends AbstractAgent {
 
   @SwimLane("addSensor")
   CommandLane<Value> addSensorCommand = this.<Value>commandLane()
-    .onCommand(sensorId -> {
-      this.sensorList.put(sensorId.stringValue(), sensorId.stringValue());
+    .onCommand(sensor -> {
+
+      this.sensorList.put(sensor.get("sensorId").stringValue(), sensor);
     });
 
   @Override

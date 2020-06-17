@@ -24,6 +24,9 @@ public class SensorState extends AbstractAgent {
   @SwimLane("name")
   ValueLane<String> name = this.<String>valueLane();
 
+  @SwimLane("info")
+  ValueLane<Value> info = this.<Value>valueLane();
+
   @SwimLane("history")
   MapLane<Long, Float> history = this.<Long, Float>mapLane()
     .didUpdate((key, newValue, oldValue) -> {
@@ -44,10 +47,11 @@ public class SensorState extends AbstractAgent {
   CommandLane<Record> setNameCommand = this.<Record>commandLane()
     .onCommand((newData) -> {
       this.name.set(newData.get("sensorName").stringValue());
+      this.info.set(newData);
       if(!isRegistered) {
         String plantNode = String.format("/plant/%1$s", newData.get("plantId").stringValue());
         // System.out.println(plantNode);
-        command(plantNode, "addSensor", newData.get("sensorId"));
+        command(plantNode, "addSensor", newData);
         this.isRegistered = true;
       }
 

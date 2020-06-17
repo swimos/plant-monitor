@@ -51,7 +51,7 @@ h6 {
   width: 970px;
   margin: 10px auto 50px auto;
   display: grid;
-  grid-template-columns: auto 400px auto;
+  grid-template-columns: 230px 400px auto;
   grid-gap: 10px;
 }
 
@@ -116,4 +116,8 @@ input[type="button"]:hover {
   margin: 0px auto;
   left: calc(50% - 128px);
   position: relative;  
+}
+
+#plantListingDiv {
+  font-size: 12px;
 }

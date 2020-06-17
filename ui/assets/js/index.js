@@ -250,7 +250,7 @@ class PlantPage {
       .label(new swim.TextRunView().textColor("#4a4a4a"));
 
     this.tempDial = new swim.DialView()
-      .total(40)
+      .total(100)
       .value(0) // initialize to zero so the dial will tween in
       .meterColor(this.tempColor)
       .label(new swim.TextRunView().textColor("#4a4a4a"));

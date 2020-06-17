@@ -6,7 +6,7 @@
     "swimAddress": "127.0.0.1",
     "swimPort": "9001",
     "showDebug": true,
-    "mainLoopInterval": 2000,
+    "mainLoopInterval": 5000,
     "authToken": "ak_1MDE3MjI5MWVlZWVhN2ExZTNkYzEyYWU3MDAwMDAwMDA01722982f11bceef6448061800000000hHrp7q2Ow4TeYe9x5SkkOCJ28GBIRThK",
     "apiUrl": "api.us-east-1.mbedcloud.com",
     "deviceId": "017295b130520000000000010016810c",
