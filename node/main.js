@@ -144,15 +144,15 @@ class Main {
         for(let device of this.deviceList) {
 
             if(this.deviceLookup.indexOf(device.id) === -1) {
-                swimClient.command(this.swimUrl, `/plant/${device.endpoint_name}`, 'createPlant', device);
+                
                 // console.info(this.swimUrl, `/plant/${device.endpoint_name}`, 'createPlant', device);
-                // if(device.state === "registered") {
-
+                if(device.state === "registered") {
+                    swimClient.command(this.swimUrl, `/plant/${device.endpoint_name}`, 'createPlant', device);
                     this.deleteActiveSubscriptions(device.endpoint_name);
                     this.subscribeToDeviceEndpoints(device.endpoint_name);
-                // } else {
-                //     console.info(`Device ${device.endpoint_name} not registered`);
-                // }
+                } else {
+                    console.info(`Device ${device.endpoint_name} not registered`);
+                }
                 this.deviceLookup.push(device.id);
             }
             // console.info('device', device);
@@ -173,7 +173,7 @@ class Main {
                     sensorId: endpoint.lane,
                     resourcePath: endpoint.subscription.uri
                 }            
-                swimClient.command(this.swimUrl, `/sensor/${deviceId}/${endpoint.lane}`, 'setName', msg);            
+                swimClient.command(this.swimUrl, `/sensor/${deviceId}/${endpoint.lane}`, 'setInfo', msg);            
     
             }
         }        
@@ -217,7 +217,9 @@ class Main {
                 this.getResourceValue(endpointName, newId, endpoint.uri);
 
                 const currEndpoint = this.endPointUriLookup[endpoint.uri];
-                swimClient.command(this.swimUrl, `/sensor/${endpointName}/${currEndpoint.lane}`, 'setLatest', {sensorData: 0});
+                swimClient.command(this.swimUrl, `/sensor/${endpointName}/${currEndpoint.lane}`, 'setAsyncId', newId);
+                console.info(this.swimUrl, `/sensor/${endpointName}/${currEndpoint.lane}`, 'setAsyncId', newId);
+                // swimClient.command(this.swimUrl, `/sensor/${endpointName}/${currEndpoint.lane}`, 'setLatest', {sensorData: 0});
 
             } else {
                 console.info(`Endpoint ${endpointName} for ${endpoint.uri} had a connection error`);
@@ -232,7 +234,7 @@ class Main {
     getResourceValue(endpointName, asyncId, uri) {
         const msg = `{"method": "GET", "uri": "${uri}"}`;
         this.httpRequest(`/v2/device-requests/${endpointName}?async-id=${asyncId}`, msg, 'POST', (result) => {
-            // console.info(result);
+            console.info(result);
         });
     }    
 

@@ -22,6 +22,26 @@
              
         },
         {
+            "name": "Blink Action",
+            "lane": "blinkAction",
+            "enabled": true,
+            "subscription": {
+                "uri": "/3201/0/5850", 
+                "obs": true                
+            }
+             
+        },
+        {
+            "name": "Blink Pattern",
+            "lane": "blinkPattern",
+            "enabled": true,
+            "subscription": {
+                "uri": "/3201/0/5853", 
+                "obs": true                
+            }
+             
+        },
+        {
             "name": "Light Level",
             "lane": "light",
             "enabled": true,

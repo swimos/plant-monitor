@@ -4,6 +4,16 @@
 #include "simple-mbed-cloud-client.h"
 #include "SimulatorBlockDevice.h"
 #include "eventOS_scheduler.h"
+#include "mbed.h"
+#include "C12832.h"
+#include "Sht31.h"
+
+C12832 lcd(SPI_MOSI, SPI_SCK, SPI_MISO, p8, p11);
+Sht31 sht31(I2C_SDA, I2C_SCL);
+DigitalOut led(LED1);
+AnalogOut lightSensor(p15);
+AnalogOut soilSensor(p16);
+AnalogOut pressureSensor(p17);
 
 SimulatorBlockDevice bd("myblockdevice", 128 * 512, 512);
 
@@ -27,49 +37,79 @@ void fake_button_press() {
 }
 
 void light_change() {
-    int newDiff = rand() % 5 + 1;
-    int v = 0;
-    if((rand() % 2) == 1) {
-            v = light_res->get_value_int() + newDiff;
+    float light = lightSensor.read();
+
+    if(light != 0.0f) {
+
+        light_res->set_value(light*100);
+        printf("light read as: %.1f \n", light*100);
+
     } else {
-            v = light_res->get_value_int() - newDiff;
+        int newDiff = rand() % 5 + 1;
+        int v = 0;
+        if((rand() % 2) == 1) {
+                v = light_res->get_value_int() + newDiff;
+        } else {
+                v = light_res->get_value_int() - newDiff;
+        }
+        if(v > 100 || v < 0) {
+            v = 50;
+        }
+        light_res->set_value(v);
+        // printf("light change to: %d \n", v);
+
     }
-    if(v > 100 || v < 0) {
-        v = 50;
-    }
-    light_res->set_value(v);
-    printf("light change to: %d \n", v);
 }
 
 void soil_change() {
-    int newDiff = rand() % 5 + 1;
-    int v = 0;
-    if((rand() % 2) == 1) {
-            v = soil_res->get_value_int() + newDiff;
+    float soil = soilSensor.read();
+
+    if(soil != 0.0f) {
+        soil_res->set_value(soil*100);
+        printf("soil read as: %.1f \n", soil*100);
+
     } else {
-            v = soil_res->get_value_int() - newDiff;
-    }
-    if(v > 100 || v < 0) {
-        v = 50;
+        int newDiff = rand() % 5 + 1;
+        int v = 0;
+        if((rand() % 2) == 1) {
+                v = soil_res->get_value_int() + newDiff;
+        } else {
+                v = soil_res->get_value_int() - newDiff;
+        }
+        if(v > 100 || v < 0) {
+            v = 50;
+        }
+
+        soil_res->set_value(v);
+        printf("soil change to: %d \n", v);
+
     }
 
-    soil_res->set_value(v);
-    printf("soil change to: %d \n", v);
 }
 void temp_change() {
-    int newDiff = rand() % 5 + 1;
-    int v = 0;
-    if((rand() % 2) == 1) {
-            v = temp_res->get_value_int() + newDiff;
-    } else {
-            v = temp_res->get_value_int() - newDiff;
-    }
-    if(v > 100 || v < 0) {
-        v = 50;
-    }
+    float temp = sht31.readTemperature();
 
-    temp_res->set_value(v);
-    printf("temp change to: %d \n", v);
+    if(temp != 0.0f) {
+        temp_res->set_value(temp);
+        printf("temp sensor read: %.1f \n", temp);
+    } else {
+        int newDiff = rand() % 5 + 1;
+        int v = 0;
+        if((rand() % 2) == 1) {
+                v = temp_res->get_value_int() + newDiff;
+        } else {
+                v = temp_res->get_value_int() - newDiff;
+        }
+        if(v > 100 || v < 0) {
+            v = 50;
+        }
+
+        temp_res->set_value(v);
+        printf("temp change to: %d \n", v);
+
+    }
+    
+    
 }
 void humidity_change() {
     int newDiff = rand() % 5 + 1;
@@ -85,6 +125,9 @@ void humidity_change() {
 
     humidity_res->set_value(v);    
     printf("humidity change to: %d \n", v);
+
+    float humidity = sht31.readHumidity() * 100;
+    printf("humidity sensor read: %.1f \n", humidity);
 }
 void pressure_change() {
     int newDiff = rand() % 5 + 1;
@@ -109,6 +152,16 @@ void refresh_sensors() {
     temp_change();
     humidity_change();
     pressure_change();
+
+    // lcd.cls();
+
+    // float temp = sht31.readTemperature();
+    // float humidity = sht31.readHumidity();
+
+    // lcd.locate(3, 3);
+    // lcd.printf("Temperature: %.2f C", temp);
+    // lcd.locate(3, 13);
+    // lcd.printf("Humidity: %.2f %%", humidity);    
 }
 
 /**
@@ -158,10 +211,6 @@ void blink_callback(MbedCloudClientResource *resource, const uint8_t *buffer, ui
  */
 void button_callback(MbedCloudClientResource *resource, const NoticationDeliveryStatus status) {
     printf("Button notification, status %s (%d)\n", MbedCloudClientResource::delivery_status_to_string(status), status);
-}
-
-void light_callback(MbedCloudClientResource *resource, const NoticationDeliveryStatus status) {
-    printf("Light notification, status %s (%d)\n", MbedCloudClientResource::delivery_status_to_string(status), status);
 }
 
 /**
@@ -215,8 +264,6 @@ int main() {
     light_res->set_value(50);
     light_res->methods(M2MMethod::GET);
     light_res->observable(true);
-    light_res->attach_notification_callback(light_callback);
-    
 
     soil_res = client.create_resource("/3203/0/5511", "soil_level");
     soil_res->set_value(50);

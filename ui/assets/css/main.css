@@ -118,6 +118,20 @@ input[type="button"]:hover {
   position: relative;  
 }
 
-#plantListingDiv {
-  font-size: 12px;
+#plantListingDiv, #alertListingDiv {
+  font-size: 14px;
+}
+
+#alertListingDiv div {
+  display: grid;
+  grid-template-columns: auto 30px;
+}
+
+.plantListColumn {
+  display: grid;
+  grid-template-rows: 32px auto 32px 300px;
+}
+
+.plantListColumn div {
+  overflow: auto;
 }

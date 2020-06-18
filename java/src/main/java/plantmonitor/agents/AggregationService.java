@@ -20,6 +20,9 @@ public class AggregationService extends AbstractAgent {
     @SwimLane("plantList")
     MapLane<String, Value> plantList = this.<String, Value>mapLane();
   
+    @SwimLane("plantAlerts")
+    MapLane<String, Value> plantAlerts = this.<String, Value>mapLane();
+
     @SwimLane("addPlant")
     CommandLane<Value> addPlantCommand = this.<Value>commandLane().onCommand(plantData -> {
       String plantId = plantData.get("id").stringValue("none");
@@ -28,6 +31,21 @@ public class AggregationService extends AbstractAgent {
       }  
     });
 
+  @SwimLane("addAlert")
+  CommandLane<Value> addAlertCommand = this.<Value>commandLane()
+    .onCommand(sensor -> {
+      System.out.println("add sensor alert");
+      System.out.println(sensor);
+      this.plantAlerts.put(sensor.get("plantId").stringValue(), sensor.get("alertCount"));
+    });
+
+  @SwimLane("removeAlert")
+  CommandLane<Value> removeAlertCommand = this.<Value>commandLane()
+    .onCommand(sensorId -> {
+      System.out.println("remove sensor alert");
+      System.out.println(sensorId);
+      this.plantAlerts.remove(sensorId.stringValue());
+    });
 
     @Override
     public void didStart() {

@@ -20,10 +20,10 @@ class Sim {
   };
   keepSynced = false;
 
-  lightGreenLeafColor = swim.Color.rgb(128,197,110);
-  darkGreenLeafColor = swim.Color.rgb(102,172,102);
-  lightBrownLeafColor = swim.Color.rgb(197,157,110);
-  darkBrownLeafColor = swim.Color.rgb(172,145,102);
+  lightGreenLeafColor = swim.Color.rgb(128, 197, 110);
+  darkGreenLeafColor = swim.Color.rgb(102, 172, 102);
+  lightBrownLeafColor = swim.Color.rgb(197, 157, 110);
+  darkBrownLeafColor = swim.Color.rgb(172, 145, 102);
 
   constructor(swimUrl) {
     this.swimUrl = swimUrl
@@ -124,6 +124,7 @@ class Sim {
       .open()
     this.links['sensorList'] = swim.nodeRef(this.swimUrl, `/plant/${plantId}`).downlinkMap().laneUri('sensorList')
       .didUpdate((key, value) => {
+        console.info(key, value);
         if (!this.sensorList[key.stringValue()]) {
           this.sensorList[key.stringValue()] = value.stringValue();
           this.startSensorListener(plantId, key.stringValue());
@@ -165,11 +166,11 @@ class Sim {
             // const newLightColor = swim.Color.rgb(newLightColorR, newLightColorG, newLightColorB).toHexString();
             // const newDarkColor = swim.Color.rgb(newDarkColorR, newDarkColorG, newDarkColorB).toHexString();
             // console.info(newLightColor, newDarkColor);
-            for(let svgItem of document.getElementById("plantLeaves").children) { 
-              if(svgItem.getAttribute("type") == "light") {
+            for (let svgItem of document.getElementById("plantLeaves").children) {
+              if (svgItem.getAttribute("type") == "light") {
                 svgItem.style.fill = newLightColor;
               }
-              if(svgItem.getAttribute("type") == "dark") {
+              if (svgItem.getAttribute("type") == "dark") {
                 svgItem.style.fill = newDarkColor;
               }
             }
@@ -208,6 +209,11 @@ class Sim {
         "name": plantName
       }
       swim.command(this.swimUrl, `/plant/${plantId}`, 'createPlant', plantInfo);
+      swim.command(this.swimUrl, `/sensor/${plantId}/light`, 'setInfo', { sensorId: 'light', sensorName: "Light", "plantId": plantId });
+      swim.command(this.swimUrl, `/sensor/${plantId}/soil`, 'setInfo', { sensorId: 'soil', sensorName: "Soil", "plantId": plantId });
+      swim.command(this.swimUrl, `/sensor/${plantId}/tempAvg`, 'setInfo', { sensorId: 'tempAvg', sensorName: "Temp", "plantId": plantId });
+      swim.command(this.swimUrl, `/sensor/${plantId}/pressure`, 'setInfo', { sensorId: 'pressure', sensorName: "Pressure", "plantId": plantId });
+      swim.command(this.swimUrl, `/sensor/${plantId}/humidity`, 'setInfo', { sensorId: 'humidity', sensorName: "Humidity", "plantId": plantId });
     } else {
       console.info("Existing Plant");
     }
@@ -218,7 +224,7 @@ class Sim {
 
   handleRangeUpdate(evt) {
     // console.info(evt)
-    document.getElementById(evt.name.replace("Range","Value")).value = evt.value;
+    document.getElementById(evt.name.replace("Range", "Value")).value = evt.value;
   }
 
   collectFormData() {
@@ -276,7 +282,7 @@ Utils = {
 
   interpolate: (startValue, endValue, stepNumber, lastStepNumber) => {
     return (endValue - startValue) * stepNumber / lastStepNumber + startValue;
-  },   
+  },
 
   setCookie: (cookieName, cookieValue, expireDays) => {
     var newDate = new Date();

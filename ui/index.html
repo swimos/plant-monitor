@@ -38,20 +38,28 @@
 		Plant Monitor
 	</header>
 	<main class="main" id="main">
-		<div>
+		<div class="plantListColumn">
 			<h4>Plant List</h4>
 			<div id="plantListingDiv">
 
 			</div>
+
+			<h4>Plant Alert List</h4>
+			<div id="alertListingDiv">
+
+			</div>
+
 		</div>
         <div>
-            <h4>Current Levels</h4>
+            <h4 id="plantNameHeader">Plant</h4>
             <div style="width: 400px; height: 400px;" id="soilGauge">
             
 			</div>
 			<div style="display: grid; grid-template-columns: 25% 75%;">
 				<div>humidity:</div><div id="humidityValue">0</div>
 				<div>pressure:</div><div id="pressureValue">0</div>
+				<input type="button" value="Blink" onclick="page.blinkLed()">
+				<input type="button" value="Change Pattern" onclick="page.changePattern()">
 			</div>
         </div>
 

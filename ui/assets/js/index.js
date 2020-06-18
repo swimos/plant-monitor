@@ -1,37 +1,38 @@
 class PlantPage {
 
-  swimUrl = null;
-  links = {};
-  plantList = {};
-  plantListSynced = false;
-  plantListLink = null;
-  plantDataLink = null;
-  plantInfo = null;
-
-  sensorList = [];
-  sensorListSynced = false;
-
-  tween = swim.Transition.duration(300);
-
-  gaugePanel = null;
-  mainGauge = null;
-  ledGauge = null;
-  soilDial = null;
-  lightDial = null;
-  tempDial = null;
-
-  soilColor = swim.Color.rgb(14, 173, 105);
-  lightColor = swim.Color.rgb(255, 210, 63);
-  tempColor = swim.Color.rgb(238, 66, 102);
-
-  charts = [];
-  plots = [];
-
-  tempImg = new Image();
-
   constructor(swimUrl) {
     this.swimUrl = swimUrl;
+    this.links = {};
+    this.plantList = {};
+    this.plantListSynced = false;
+    this.plantListLink = null;
+    this.plantDataLink = null;
+    this.plantInfo = null;
+    this.plantAlerts = [];
 
+    this.sensorList = [];
+    this.sensorListSynced = false;
+
+    this.tween = swim.Transition.duration(300);
+
+    this.gaugePanel = null;
+    this.mainGauge = null;
+    this.ledGauge = null;
+    this.soilDial = null;
+    this.lightDial = null;
+    this.tempDial = null;
+
+    this.soilColor = swim.Color.rgb(14, 173, 105);
+    this.lightColor = swim.Color.rgb(255, 210, 63);
+    this.tempColor = swim.Color.rgb(238, 66, 102);
+
+    this.selectedPlant = null;
+    this.charts = [];
+    this.plots = [];
+
+    this.tempImg = new Image();
+    this.blinkAsyncId = null;
+    this.patternAsyncId = null;
   }
 
   /**
@@ -43,7 +44,7 @@ class PlantPage {
     // load list of animations saved in swim animationService
     this.plantListLink = swim.nodeRef(this.swimUrl, '/aggregationService').downlinkMap().laneUri('plantList')
       .didUpdate((key, value) => {
-        if(!document.getElementById(key.stringValue())) {
+        if (!document.getElementById(key.stringValue())) {
           this.plantList[key.stringValue()] = value.toObject();
           const newDiv = document.createElement("div");
           newDiv.id = key.stringValue();
@@ -55,25 +56,56 @@ class PlantPage {
       .didRemove((key) => {
         delete this.plantList[key.stringValue()];
         const removeDiv = document.getElementById(key.stringValue());
-        if(removeDiv) {
+        if (removeDiv) {
           document.getElementById("plantListingDiv").removeChild(removeDiv);
         }
       })
       .didSync(() => {
-        if(!document.getElementById("none")) {
-          const newDiv = document.createElement("div");
-          newDiv.id = 'none';
-          newDiv.innerText = "None";
+        // if (!document.getElementById("none")) {
+        //   const newDiv = document.createElement("div");
+        //   newDiv.id = 'none';
+        //   newDiv.innerText = "None";
 
-          document.getElementById("plantListingDiv").appendChild(newDiv);
+        //   document.getElementById("plantListingDiv").appendChild(newDiv);
 
-        }
+        // }
 
         if (!this.plantListSynced) {
           this.plantListSynced = true;
           this.selectPlant(Object.keys(this.plantList)[0]);
         }
+        this.alertListLink.open();
       });
+
+    this.alertListDiv = document.getElementById("alertListingDiv");
+    this.alertListLink = swim.nodeRef(this.swimUrl, '/aggregationService').downlinkMap().laneUri('plantAlerts')
+      .didUpdate((key, value) => {
+        let alertRow = document.getElementById(`${key.stringValue()}-alertrow`);
+        if (!alertRow) {
+          alertRow = document.createElement("div");
+          alertRow.setAttribute("id", `${key.stringValue()}-alertrow`);
+          this.alertListDiv.appendChild(alertRow);
+
+        }
+        const plant = this.plantList[key.stringValue()];
+        if (plant) {
+          alertRow.innerHTML = `<span>${plant.name}</span> <b>${value.numberValue()}</b>`;
+        } else {
+          console.info(key, this.plantList);
+        }
+
+
+        // console.info(key, value);
+      })
+      .didRemove((key) => {
+        console.info(key);
+        let alertRow = document.getElementById(`${key.stringValue()}-alertrow`);
+        if (alertRow) {
+          this.alertListDiv.removeChild(alertRow);
+
+        }
+
+      })
 
     this.start();
   }
@@ -94,7 +126,7 @@ class PlantPage {
 
     document.getElementById("plantListingDiv").onclick = (evt) => {
       this.handlePlantListClick(evt);
-      
+
     }
   }
 
@@ -112,21 +144,25 @@ class PlantPage {
       this.links[linkLKey].close();
       this.links[linkLKey] = null;
     }
-    document.getElementById("pressureValue").innerHTML = ``; 
-    document.getElementById("humidityValue").innerHTML = ``; 
+    document.getElementById("pressureValue").innerHTML = ``;
+    document.getElementById("humidityValue").innerHTML = ``;
     this.links = {};
     this.sensorList = {};
     this.sensorListSynced = false;
 
     const plant = this.plantList[plantId];
-
-    if(!plant) {
+    this.selectedPlant = plant;
+    if (!plant) {
       return;
     }
 
     this.drawCharts();
 
-    this.mainGauge.title(new swim.TextRunView(plant.name).font("20px sans-serif"))
+    this.blinkAsyncId = null;
+    this.patternAsyncId = null;
+
+    document.getElementById("plantNameHeader").innerText = plant.name;
+    // this.mainGauge.title(new swim.TextRunView(plant.name).font("20px sans-serif"))
     this.links['plantInfo'] = swim.nodeRef(this.swimUrl, `/plant/${plantId}`).downlinkValue().laneUri('info')
       .didSet((newData, oldData) => {
         if (newData.isDefined()) {
@@ -134,7 +170,32 @@ class PlantPage {
         }
 
       })
-      .open()
+    this.links['blinkAsyncId'] = swim.nodeRef(this.swimUrl, `/sensor/${plantId}/blinkAction`).downlinkValue().laneUri('asyncId')
+      .didSet((newData, oldData) => {
+        if (newData.isDefined()) {
+          this.blinkAsyncId = newData.stringValue();
+        }
+
+      })
+
+    this.links['patternAsyncId'] = swim.nodeRef(this.swimUrl, `/sensor/${plantId}/blinkPattern`).downlinkValue().laneUri('asyncId')
+      .didSet((newData, oldData) => {
+        if (newData.isDefined()) {
+          this.patternAsyncId = newData.stringValue();
+        }
+
+      })
+
+      this.links['alertList'] = swim.nodeRef(this.swimUrl, `/plant/${plantId}`).downlinkMap().laneUri('alertList')
+      .didUpdate((key, value) => {
+        this.plantAlerts[key.stringValue()] = value;
+        this.mainGauge.title(new swim.TextRunView(`${Object.keys(page.plantAlerts).length} Alerts`).font("20px sans-serif"))
+      })
+      .didRemove((key) => {
+        delete this.plantAlerts[key.stringValue()];
+        this.mainGauge.title(new swim.TextRunView(`${Object.keys(page.plantAlerts).length} Alerts`).font("20px sans-serif"))
+      });      
+
     this.links['sensorList'] = swim.nodeRef(this.swimUrl, `/plant/${plantId}`).downlinkMap().laneUri('sensorList')
       .didUpdate((key, value) => {
         this.sensorList[key.stringValue()] = value.stringValue();
@@ -163,27 +224,27 @@ class PlantPage {
                   case "pressure":
                     // this.tempDial.value(newValue.numberValue(), this.tween);
                     // this.tempDial.label(`${newValue.stringValue()}°C`);
-                    document.getElementById("pressureValue").innerHTML = `${newValue.stringValue()} mb`; 
+                    document.getElementById("pressureValue").innerHTML = `${newValue.stringValue()} mb`;
                     break;
                   case "humidity":
                     // this.tempDial.value(newValue.numberValue(), this.tween);
                     // this.tempDial.label(`${newValue.stringValue()}°C`);
-                    document.getElementById("humidityValue").innerHTML = `${newValue.stringValue()}%`; 
+                    document.getElementById("humidityValue").innerHTML = `${newValue.stringValue()}%`;
                     break;
-    
+
                 }
               })
               .open();
 
             this.links[`sensor-${sensor}-history`] = swim.nodeRef(this.swimUrl, `/sensor/${plantId}/${sensor}`).downlinkMap().laneUri('shortHistory')
               .didUpdate((timestamp, sensorvalue) => {
-                if(this.plots[sensor]) {
+                if (this.plots[sensor]) {
                   this.plots[sensor].insertDatum({ x: timestamp.numberValue(), y: sensorvalue.numberValue(), opacity: 1 });
                 }
-                
+
               })
               .didRemove((timestamp, sensorvalue) => {
-                if(this.plots[sensor]) {
+                if (this.plots[sensor]) {
                   this.plots[sensor].removeDatum(timestamp.numberValue());
                 }
               })
@@ -203,7 +264,7 @@ class PlantPage {
   }
 
   removeCharts() {
-    if(this.mainGauge !== null) {
+    if (this.mainGauge !== null) {
       // this.mainGauge
       this.mainGauge.removeAll();
       this.mainGauge = null;
@@ -213,11 +274,11 @@ class PlantPage {
       this.charts = [];
       this.plots = [];
     }
-    
+
   }
 
   drawCharts() {
-    if(this.gaugePanel === null) {
+    if (this.gaugePanel === null) {
       this.gaugePanel = new swim.HtmlAppView(document.getElementById("soilGauge"));
     }
     const canvas = this.gaugePanel.append("canvas");
@@ -266,8 +327,8 @@ class PlantPage {
     for (let chartKey of chartList) {
       const chartPanel = new swim.HtmlAppView(document.getElementById(`${chartKey}Chart`));
       const chartCanvas = chartPanel.append("canvas");
-  
-  
+
+
       const clr = "#fff";
       this.charts[chartKey] = new swim.ChartView()
         .bottomAxis("time")
@@ -286,7 +347,7 @@ class PlantPage {
       this.plots[chartKey] = new swim.LineGraphView()
         .strokeWidth(2);
 
-      switch(chartKey) {
+      switch (chartKey) {
         case 'soil':
           this.plots[chartKey].stroke(this.soilColor);
           break;
@@ -306,4 +367,53 @@ class PlantPage {
     }
   }
 
+  blinkLed() {
+    if (this.selectedPlant !== null && this.blinkAsyncId) {
+      var xhttp = new XMLHttpRequest();
+      let msg = JSON.stringify({ "method": "POST", "uri": "/3201/0/5850" });
+      let str = `https://api.us-east-1.mbedcloud.com/v2/device-requests/${this.selectedPlant.id}?async-id=${this.blinkAsyncId}`
+
+      xhttp.open('POST', str, true)
+      xhttp.setRequestHeader("Content-type", "application/json");
+      xhttp.setRequestHeader("Authorization", "Bearer ak_1MDE3MjI5MWVlZWVhN2ExZTNkYzEyYWU3MDAwMDAwMDA01722982f11bceef6448061800000000hHrp7q2Ow4TeYe9x5SkkOCJ28GBIRThK");
+      xhttp.onreadystatechange = function () {
+        if (this.readyState == 4) {
+          if (this.status == 202) {
+            console.info("Command sent");
+          } else {
+            console.info("could not send command", this)
+          }
+        }
+      };
+      xhttp.send(msg);
+    } else {
+      alert("Select a device");
+    }
+  }
+
+  changePattern() {
+    if (this.selectedPlant !== null && this.patternAsyncId) {
+      const newPattern = prompt("Enter new pattern");
+
+      var xhttp = new XMLHttpRequest();
+      let msg = `{"method": "PUT", "uri": "/3201/0/5853", "accept": "text/plain", "content-type": "text/plain", "payload-b64": "${btoa(newPattern)}"}`;
+      let str = `https://api.us-east-1.mbedcloud.com/v2/device-requests/${this.selectedPlant.id}?async-id=${this.patternAsyncId}`
+
+      xhttp.open('POST', str, true)
+      xhttp.setRequestHeader("Content-type", "application/json");
+      xhttp.setRequestHeader("Authorization", "Bearer ak_1MDE3MjI5MWVlZWVhN2ExZTNkYzEyYWU3MDAwMDAwMDA01722982f11bceef6448061800000000hHrp7q2Ow4TeYe9x5SkkOCJ28GBIRThK");
+      xhttp.onreadystatechange = function () {
+        if (this.readyState == 4) {
+          if (this.status == 202) {
+            console.info("Command sent");
+          } else {
+            console.info("could not send command", this)
+          }
+        }
+      };
+      xhttp.send(msg);
+    } else {
+      alert("Select a device");
+    }
+  }
 }
