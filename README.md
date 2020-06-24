@@ -1,6 +1,6 @@
 # Simple Plant Monitor
 
-Stripped down version of our Greenhouse Demo. This version simply shows the real stime status of a series of sensor hooked up to a plant. 
+Stripped down version of our Greenhouse Demo. This version simply shows the real time status of a series of sensor hooked up to a plant. 
 
 Application has three swim WebAgent types:
 * AggreagtionService - top level WebAgent which tracks one or more plants. Mostly used to find out what plants are being trackes

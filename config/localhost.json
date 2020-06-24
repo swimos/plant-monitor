@@ -9,18 +9,7 @@
     "mainLoopInterval": 5000,
     "authToken": "ak_1MDE3MjI5MWVlZWVhN2ExZTNkYzEyYWU3MDAwMDAwMDA01722982f11bceef6448061800000000hHrp7q2Ow4TeYe9x5SkkOCJ28GBIRThK",
     "apiUrl": "api.us-east-1.mbedcloud.com",
-    "deviceId": "017295b130520000000000010016810c",
     "endpoints": [
-        {
-            "name": "Button Click Count",
-            "lane": "clicks",
-            "enabled": true,
-            "subscription": {
-                "uri": "/3200/0/5501", 
-                "obs": true                
-            }
-             
-        },
         {
             "name": "Blink Action",
             "lane": "blinkAction",

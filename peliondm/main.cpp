@@ -108,8 +108,8 @@ void temp_change() {
         printf("temp change to: %d \n", v);
 
     }
-    
-    
+
+
 }
 void humidity_change() {
     int newDiff = rand() % 5 + 1;
@@ -123,7 +123,7 @@ void humidity_change() {
         v = 50;
     }
 
-    humidity_res->set_value(v);    
+    humidity_res->set_value(v);
     printf("humidity change to: %d \n", v);
 
     float humidity = sht31.readHumidity() * 100;
@@ -161,7 +161,7 @@ void refresh_sensors() {
     // lcd.locate(3, 3);
     // lcd.printf("Temperature: %.2f C", temp);
     // lcd.locate(3, 13);
-    // lcd.printf("Humidity: %.2f %%", humidity);    
+    // lcd.printf("Humidity: %.2f %%", humidity);
 }
 
 /**
@@ -211,6 +211,10 @@ void blink_callback(MbedCloudClientResource *resource, const uint8_t *buffer, ui
  */
 void button_callback(MbedCloudClientResource *resource, const NoticationDeliveryStatus status) {
     printf("Button notification, status %s (%d)\n", MbedCloudClientResource::delivery_status_to_string(status), status);
+}
+
+void light_callback(MbedCloudClientResource *resource, const NoticationDeliveryStatus status) {
+    printf("Light notification, status %s (%d)\n", MbedCloudClientResource::delivery_status_to_string(status), status);
 }
 
 /**
@@ -264,6 +268,8 @@ int main() {
     light_res->set_value(50);
     light_res->methods(M2MMethod::GET);
     light_res->observable(true);
+    light_res->attach_notification_callback(light_callback);
+
 
     soil_res = client.create_resource("/3203/0/5511", "soil_level");
     soil_res->set_value(50);

@@ -44,34 +44,45 @@
 
 			</div>
 
-			<h4>Plant Alert List</h4>
-			<div id="alertListingDiv">
-
-			</div>
-
 		</div>
         <div>
             <h4 id="plantNameHeader">Plant</h4>
             <div style="width: 400px; height: 400px;" id="soilGauge">
             
 			</div>
-			<div style="display: grid; grid-template-columns: 25% 75%;">
-				<div>humidity:</div><div id="humidityValue">0</div>
-				<div>pressure:</div><div id="pressureValue">0</div>
+			<div>
 				<input type="button" value="Blink" onclick="page.blinkLed()">
 				<input type="button" value="Change Pattern" onclick="page.changePattern()">
+
 			</div>
         </div>
 
-        <div>
-            <h4>Soil Moisture Level</h4>
-            <div class="chartRow" id="soilChart"></div>
+        <div class="chartsSection">
+			<div>
+            	<h4>Light Level</h4>
+            	<div class="chartRow" id="lightChart"></div>
+			</div>
 
-            <h4>Light Level</h4>
-            <div class="chartRow" id="lightChart"></div>
+			<div>
+				<h4>Soil Moisture Level</h4>
+				<div class="chartRow" id="soilChart"></div>
+			</div>
+			
+			<div>
+				<h4>Temperature</h4>
+				<div class="chartRow" id="tempAvgChart"></div>
+			</div>
 
-            <h4>Temperature</h4>
-            <div class="chartRow" id="tempAvgChart"></div>
+			<div>
+				<h4>Pressure <span id="pressureValue">0</span></h4>
+				<div class="chartRow" id="pressureChart"></div>
+			</div>
+
+			<div>
+				<h4>Humidity <span id="humidityValue">0</span></h4>
+				<div class="chartRow" id="humidityChart"></div>
+			</div>
+
 		</div>
 		
 	</main>

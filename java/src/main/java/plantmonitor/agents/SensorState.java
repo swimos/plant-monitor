@@ -19,7 +19,14 @@ public class SensorState extends AbstractAgent {
   private boolean isRegistered = false;
 
   @SwimLane("latest")
-  ValueLane<Float> latest = this.<Float>valueLane();
+  ValueLane<Float> latest = this.<Float>valueLane()
+    .didSet((newValue, oldValue) -> {
+      final long now = System.currentTimeMillis();
+      this.history.put(now, newValue);
+      this.shortHistory.put(now, newValue);
+      this.checkAlert(newValue);
+
+    });
 
   @SwimLane("name")
   ValueLane<String> name = this.<String>valueLane();
@@ -55,14 +62,8 @@ public class SensorState extends AbstractAgent {
   @SwimLane("setLatest")
   CommandLane<Record> setLatestCommand = this.<Record>commandLane()
     .onCommand((newData) -> {
-      // System.out.println(newData);
-      final long now = System.currentTimeMillis();
-
       Float newValue = newData.get("sensorData").floatValue();
       latest.set(newValue);
-      history.put(now, newValue);
-      shortHistory.put(now, newValue);
-      this.checkAlert(newValue);
     });    
 
   @SwimLane("setThreshold")
@@ -92,14 +93,16 @@ public class SensorState extends AbstractAgent {
     });    
 
   private void checkAlert(Float newValue) {
+    String plantNode = String.format("/plant/%1$s", this.info.get().get("plantId").stringValue("none"));
+    if(plantNode != "none") {
       if (newValue <= threshold.get()) {
         // trigger alert
         if(this.alert.get() == false) {
-          System.out.print("add alert: ");
-          System.out.println((newValue <= threshold.get()));
+          // System.out.print("add alert: ");
+          // System.out.println((newValue <= threshold.get()));
           alert.set(true);
           // tell plant
-          String plantNode = String.format("/plant/%1$s", this.info.get().get("plantId").stringValue());
+          
           command(plantNode, "addAlert", this.info.get());
 
         }
@@ -108,13 +111,13 @@ public class SensorState extends AbstractAgent {
         if(this.alert.get() == true) {
           alert.set(false);
           // tell plant
-          String plantNode = String.format("/plant/%1$s", this.info.get().get("plantId").stringValue());
+          // String plantNode = String.format("/plant/%1$s", this.info.get().get("plantId").stringValue());
           command(plantNode, "removeAlert", this.info.get());
 
         }
 
       }
-
+    }
   }      
 
   @Override

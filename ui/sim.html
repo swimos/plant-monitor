@@ -154,6 +154,13 @@
 							oninput="page.handleRangeUpdate(this)">
 					</div>
 
+					<div>Pressure:</div>
+					<div class="plantInputs">
+						<input type="number" name="pressureValue" id="pressureValue" value="0" size="4">
+						<input type="range" name="pressureRange" id="pressureRange" value="0" min="0" max="1100"
+							oninput="page.handleRangeUpdate(this)">
+					</div>
+
 					<div>Humidity:</div>
 					<div class="plantInputs">
 						<input type="number" name="humidityValue" id="humidityValue" value="0" size="4">
@@ -161,12 +168,6 @@
 							oninput="page.handleRangeUpdate(this)">
 					</div>
 
-					<div>Pressure:</div>
-					<div class="plantInputs">
-						<input type="number" name="pressureValue" id="pressureValue" value="0" size="4">
-						<input type="range" name="pressureRange" id="pressureRange" value="0" min="0" max="1100"
-							oninput="page.handleRangeUpdate(this)">
-					</div>
 
 				</div>
 				<input type="submit" value="Create Plant" id="createPlantButton">

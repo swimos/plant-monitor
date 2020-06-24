@@ -45,13 +45,14 @@ public class PlantState extends AbstractAgent {
     .onCommand(sensor -> {
       System.out.println("add sensor alert");
       System.out.println(sensor);
-      this.alertList.put(sensor.get("sensorId").stringValue(), sensor);
+      if(sensor != Value.absent()) {
+        this.alertList.put(sensor.get("sensorId").stringValue(), sensor);
 
         Record alertInfo = Record.create()
           .slot("plantId", this.info.get().get("id").stringValue())
           .slot("alertCount", this.alertList.size());
         command("/aggregationService", "addAlert", alertInfo);
-
+      }
     });
 
   @SwimLane("removeAlert")

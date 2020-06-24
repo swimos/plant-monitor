@@ -25,6 +25,8 @@ class PlantPage {
     this.soilColor = swim.Color.rgb(14, 173, 105);
     this.lightColor = swim.Color.rgb(255, 210, 63);
     this.tempColor = swim.Color.rgb(238, 66, 102);
+    this.pressureColor = swim.Color.rgb(117, 69, 115)
+    this.humidityColor = swim.Color.rgb(79, 121, 162)
 
     this.selectedPlant = null;
     this.charts = [];
@@ -48,7 +50,8 @@ class PlantPage {
           this.plantList[key.stringValue()] = value.toObject();
           const newDiv = document.createElement("div");
           newDiv.id = key.stringValue();
-          newDiv.innerText = this.plantList[key.stringValue()].name;
+          // newDiv.innerText = this.plantList[key.stringValue()].name;
+          newDiv.innerHTML = `<span>${this.plantList[key.stringValue()].name}</span> <b id="${key.stringValue()}-alertCount">0</b>`;
 
           document.getElementById("plantListingDiv").appendChild(newDiv);
         }
@@ -61,15 +64,6 @@ class PlantPage {
         }
       })
       .didSync(() => {
-        // if (!document.getElementById("none")) {
-        //   const newDiv = document.createElement("div");
-        //   newDiv.id = 'none';
-        //   newDiv.innerText = "None";
-
-        //   document.getElementById("plantListingDiv").appendChild(newDiv);
-
-        // }
-
         if (!this.plantListSynced) {
           this.plantListSynced = true;
           this.selectPlant(Object.keys(this.plantList)[0]);
@@ -77,34 +71,20 @@ class PlantPage {
         this.alertListLink.open();
       });
 
-    this.alertListDiv = document.getElementById("alertListingDiv");
     this.alertListLink = swim.nodeRef(this.swimUrl, '/aggregationService').downlinkMap().laneUri('plantAlerts')
       .didUpdate((key, value) => {
-        let alertRow = document.getElementById(`${key.stringValue()}-alertrow`);
-        if (!alertRow) {
-          alertRow = document.createElement("div");
-          alertRow.setAttribute("id", `${key.stringValue()}-alertrow`);
-          this.alertListDiv.appendChild(alertRow);
+        let alertCount = document.getElementById(`${key.stringValue()}-alertCount`);
+        if (alertCount) {
+          alertCount.innerText = value.numberValue();
 
         }
-        const plant = this.plantList[key.stringValue()];
-        if (plant) {
-          alertRow.innerHTML = `<span>${plant.name}</span> <b>${value.numberValue()}</b>`;
-        } else {
-          console.info(key, this.plantList);
-        }
-
-
-        // console.info(key, value);
       })
       .didRemove((key) => {
-        console.info(key);
-        let alertRow = document.getElementById(`${key.stringValue()}-alertrow`);
-        if (alertRow) {
-          this.alertListDiv.removeChild(alertRow);
+        let alertCount = document.getElementById(`${key.stringValue()}-alertCount`);
+        if (alertCount) {
+          alertCount.innerText = 0;
 
         }
-
       })
 
     this.start();
@@ -131,8 +111,8 @@ class PlantPage {
   }
 
   handlePlantListClick(evt) {
-    console.info(evt.target.id);
-    this.selectPlant(evt.target.id)
+    console.info(evt.target.parentElement.id);
+    this.selectPlant(evt.target.parentElement.id)
   }
 
   selectPlant(plantId) {
@@ -186,7 +166,7 @@ class PlantPage {
 
       })
 
-      this.links['alertList'] = swim.nodeRef(this.swimUrl, `/plant/${plantId}`).downlinkMap().laneUri('alertList')
+    this.links['alertList'] = swim.nodeRef(this.swimUrl, `/plant/${plantId}`).downlinkMap().laneUri('alertList')
       .didUpdate((key, value) => {
         this.plantAlerts[key.stringValue()] = value;
         this.mainGauge.title(new swim.TextRunView(`${Object.keys(page.plantAlerts).length} Alerts`).font("20px sans-serif"))
@@ -194,7 +174,7 @@ class PlantPage {
       .didRemove((key) => {
         delete this.plantAlerts[key.stringValue()];
         this.mainGauge.title(new swim.TextRunView(`${Object.keys(page.plantAlerts).length} Alerts`).font("20px sans-serif"))
-      });      
+      });
 
     this.links['sensorList'] = swim.nodeRef(this.swimUrl, `/plant/${plantId}`).downlinkMap().laneUri('sensorList')
       .didUpdate((key, value) => {
@@ -222,12 +202,18 @@ class PlantPage {
                     this.tempDial.label(`${newValue.stringValue()}°C`);
                     break;
                   case "pressure":
-                    // this.tempDial.value(newValue.numberValue(), this.tween);
+                    this.pressureDial.value(newValue.numberValue(), this.tween);
+                    this.pressureDial.label(`${newValue.stringValue()} mb`);
+
+                  // this.tempDial.value(newValue.numberValue(), this.tween);
                     // this.tempDial.label(`${newValue.stringValue()}°C`);
                     document.getElementById("pressureValue").innerHTML = `${newValue.stringValue()} mb`;
                     break;
                   case "humidity":
-                    // this.tempDial.value(newValue.numberValue(), this.tween);
+                    this.humidityDial.value(newValue.numberValue(), this.tween);
+                    this.humidityDial.label(`${newValue.stringValue()}%`);
+
+                  // this.tempDial.value(newValue.numberValue(), this.tween);
                     // this.tempDial.label(`${newValue.stringValue()}°C`);
                     document.getElementById("humidityValue").innerHTML = `${newValue.stringValue()}%`;
                     break;
@@ -271,6 +257,8 @@ class PlantPage {
       this.charts['light'].parentView.removeAll();
       this.charts['soil'].parentView.removeAll();
       this.charts['tempAvg'].parentView.removeAll();
+      this.charts['pressure'].parentView.removeAll();
+      this.charts['humidity'].parentView.removeAll();
       this.charts = [];
       this.plots = [];
     }
@@ -316,13 +304,27 @@ class PlantPage {
       .meterColor(this.tempColor)
       .label(new swim.TextRunView().textColor("#4a4a4a"));
 
-    this.mainGauge.append(this.soilDial);
+    this.pressureDial = new swim.DialView()
+      .total(1000)
+      .value(0) // initialize to zero so the dial will tween in
+      .meterColor(this.pressureColor)
+      .label(new swim.TextRunView().textColor("#4a4a4a"));
+
+    this.humidityDial = new swim.DialView()
+      .total(100)
+      .value(0) // initialize to zero so the dial will tween in
+      .meterColor(this.humidityColor)
+      .label(new swim.TextRunView().textColor("#4a4a4a"));
+
     this.mainGauge.append(this.lightDial);
+    this.mainGauge.append(this.soilDial);
     this.mainGauge.append(this.tempDial);
+    this.mainGauge.append(this.pressureDial);
+    this.mainGauge.append(this.humidityDial);
 
     canvas.append(this.mainGauge);
 
-    const chartList = ['tempAvg', 'light', 'soil'];
+    const chartList = ['tempAvg', 'light', 'soil', 'pressure', 'humidity'];
 
     for (let chartKey of chartList) {
       const chartPanel = new swim.HtmlAppView(document.getElementById(`${chartKey}Chart`));
@@ -357,7 +359,13 @@ class PlantPage {
         case 'tempAvg':
           this.plots[chartKey].stroke(this.tempColor);
           break;
-
+        case 'pressure':
+          this.plots[chartKey].stroke(this.pressureColor);
+          break;
+        case 'humidity':
+          this.plots[chartKey].stroke(this.humidityColor);
+          break;
+    
       }
 
       this.charts[chartKey].addPlot(this.plots[chartKey]);

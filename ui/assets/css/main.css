@@ -48,16 +48,24 @@ h6 {
 }
 
 .main {
-  width: 970px;
+  max-width: 1024px;
+  min-width: 620px;
   margin: 10px auto 50px auto;
   display: grid;
-  grid-template-columns: 230px 400px auto;
+  grid-template-columns: 25% 75%;
   grid-gap: 10px;
 }
 
 .sim {
   width: 600px;
   grid-template-columns: 200px auto;
+}
+
+.chartsSection {
+  grid-column: 1 / span 2;
+  display: grid;
+  grid-template-columns: auto auto auto;  
+  grid-gap: 10px;
 }
 
 input,
@@ -95,10 +103,14 @@ input[type="button"]:hover {
   grid-row: 1 /span 2;
 }
 
-#plantListingDiv div {
+#plantListingDiv span, #alertListingDiv span {
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;  
+}
+
+#plantListingDiv b, #alertListingDiv b {
+  text-align: right;
 }
 
 #plantListingDiv div:hover {
@@ -122,7 +134,7 @@ input[type="button"]:hover {
   font-size: 14px;
 }
 
-#alertListingDiv div {
+#plantListingDiv div, #alertListingDiv div {
   display: grid;
   grid-template-columns: auto 30px;
 }
