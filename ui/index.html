@@ -47,11 +47,11 @@
 		</div>
         <div>
             <h4 id="plantNameHeader">Plant</h4>
-            <div style="width: 400px; height: 400px;" id="soilGauge">
+            <div style="width: 100%; height: calc(100% - 31px);" id="soilGauge">
             
 			</div>
-			<div>
-				<input type="button" value="Blink" onclick="page.blinkLed()">
+			<div class="plantButtons">
+				<input type="button" value="Blink LED" onclick="page.blinkLed()">
 				<input type="button" value="Change Pattern" onclick="page.changePattern()">
 
 			</div>

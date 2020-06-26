@@ -68,6 +68,14 @@ h6 {
   grid-gap: 10px;
 }
 
+@media only screen and (max-width: 800px) {
+  .chartsSection {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+
 input,
 select {
   background-color: white;
@@ -139,6 +147,9 @@ input[type="button"]:hover {
   grid-template-columns: auto 30px;
 }
 
+.selectedRow {
+  background-color:rgba(200,200,200,0.2);
+}
 .plantListColumn {
   display: grid;
   grid-template-rows: 32px auto 32px 300px;
@@ -146,4 +157,10 @@ input[type="button"]:hover {
 
 .plantListColumn div {
   overflow: auto;
+}
+
+.plantButtons {
+  position: relative;
+  margin: -50px auto;
+  text-align: center;  
 }

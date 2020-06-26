@@ -43,7 +43,6 @@ class PlantPage {
    */
   initialize() {
 
-    // load list of animations saved in swim animationService
     this.plantListLink = swim.nodeRef(this.swimUrl, '/aggregationService').downlinkMap().laneUri('plantList')
       .didUpdate((key, value) => {
         if (!document.getElementById(key.stringValue())) {
@@ -128,10 +127,18 @@ class PlantPage {
     document.getElementById("humidityValue").innerHTML = ``;
     this.links = {};
     this.sensorList = {};
+    this.plantAlerts = [];
     this.sensorListSynced = false;
 
     const plant = this.plantList[plantId];
     this.selectedPlant = plant;
+
+    let listDiv = document.getElementById("plantListingDiv");
+    listDiv.childNodes.forEach((elem) => { 
+      const plantId = (this.selectedPlant && this.selectedPlant.id) ? this.selectedPlant.id : "null";
+      elem.className = (elem.id == plantId) ? "selectedRow" : ""; 
+    } );
+
     if (!plant) {
       return;
     }
@@ -275,7 +282,7 @@ class PlantPage {
     // Create a new gauge view
     this.mainGauge = new swim.GaugeView()
       .innerRadius(swim.Length.pct(20))
-      .outerRadius(swim.Length.pct(50))
+      .outerRadius(swim.Length.pct(48))
       .dialColor(swim.Color.rgb(100, 100, 100, 0.2))
       // .title(new swim.TextRunView("Plant 1").font("20px sans-serif"))
       .font("14px sans-serif")
@@ -285,6 +292,7 @@ class PlantPage {
       .startAngle(swim.Angle.rad((count === 1 ? -Math.PI / 2 : 3 * Math.PI / 4)))
       .sweepAngle(swim.Angle.rad((count === 1 ? 2 * Math.PI : 3 * Math.PI / 2)))
     // and append it to the canvas.
+    this.mainGauge.title(new swim.TextRunView(`0 Alerts`).font("20px sans-serif"))
 
     this.soilDial = new swim.DialView()
       .total(100)
