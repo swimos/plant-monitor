@@ -45,32 +45,34 @@ class Main {
     }
 
 
+    /**
+     * main startup. Delete any active subs and start a new session
+     */
     start() {
 
+        // delete any existing callbacks 
         this.httpRequest('/v2/notification/callback', '', 'DELETE', (result) => {
             console.info("delete /v2/notification/callback result:", result);
         });
-
         this.httpRequest('/v2/notification/pull', '', 'DELETE', (result) => {
             console.info("delete /v2/notification/pull result:", result);
         });
-
         this.httpRequest('/v2/notification/websocket', '', 'DELETE', (result) => {
             console.info("delete /v2/notification/websocket result:", result);
         });
 
+        // create a subscription to get notifications over sockets
         this.httpRequest('/v2/notification/websocket', '', 'PUT', (result) => {
-            console.info("create socket requst result:", result);
+            console.info("create socket request result:", result);
+            // open websocket to get notifitcations
             this.openSocket();
         });
 
-
-
-        // this.getDeviceList();
-
-        // this.mainLoop();
     }
 
+    /**
+     * Open websocket to api server
+     */
     openSocket() {
         if (this.websocket !== null) {
             this.websocket = null;
@@ -82,17 +84,21 @@ class Main {
             console.info(`api url ${this.apiUrl}`);
         });
 
+        // create onConnect handler
         this.websocket.on('connect', (connection) => {
             console.log('WebSocket Client Connected');
+            
+            // start loading devices now that we have a socket connection
             this.getDeviceList();
+
             connection.on('error', (error) => {
                 console.log("Connection Error: " + error.toString());
             });
             connection.on('close', (msg) => {
                 console.log('WebSocket Connection Closed', msg);
-                // wait half second and reconnect
+                // wait 30 seconds and reconnect
                 setTimeout(() => {
-                    this.openSocket();
+                    this.start();
                 }, 30000);
             });
             connection.on('message', (message) => {
@@ -103,38 +109,49 @@ class Main {
             });
 
         });
-        var headers = {
+
+        // define header for auth
+        const headers = {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${this.authtoken}`
         }
+
+        // open socket
         this.websocket.connect(`wss://${this.apiUrl}/v2/notification/websocket-connect`, null, null, headers);
 
     }
 
+    /**
+     * Get list of Devices from Connect API
+     */
     getDeviceList() {
         console.info('[main] getDeviceList');
         this.httpRequest('/v3/devices', '', 'GET', (result) => {
 
+            // covert result into json
             let firstChar = result.charAt(0);
             let lastChar = result.charAt(result.length - 1);
             let resultData = null
 
+            // if first and last charts are brackets, parse as json 
+            // otherwise buffer message until first/last brackets are found
             if (firstChar === '{' && lastChar === '}') {
                 console.info("Device list loaded without buffering");
-                resultData = JSON.parse(result);
-                this.deviceList = resultData.data;
-                this.loadDevices();
+                resultData = JSON.parse(result); // parse message                
+                this.deviceList = resultData.data; // store parsed list as this.deviceList
+                this.loadDevices(); // load devices from api
             } else {
                 this.msgBuffer += result;
                 let firstChar = this.msgBuffer.charAt(0);
                 let lastChar = this.msgBuffer.charAt(this.msgBuffer.length - 1);
 
+                // first last brackets found in buffer so convert to json
                 if (firstChar === '{' && lastChar === '}') {
                     console.info("Device list loaded by buffering messages");
-                    resultData = JSON.parse(this.msgBuffer);
-                    this.deviceList = resultData.data;
-                    this.msgBuffer = '';
-                    this.loadDevices();
+                    resultData = JSON.parse(this.msgBuffer); // parse buffer                    
+                    this.deviceList = resultData.data; // store parsed list as this.deviceList
+                    this.msgBuffer = ''; // reset string buffer
+                    this.loadDevices(); // load devices from API
                 }
 
             }
@@ -143,59 +160,80 @@ class Main {
 
     }
 
+    /**
+     * Load devices will get called on startup and anytime a device status changes on connect api (like deregistation)
+     * for each device in device list that is registered:
+     * 1. notify swim of device (plant)
+     * 2. remove any active subscritions for device from api
+     * 3. create new subscriptions for device
+     * 4. update our device lookup with id so we know we have created subs
+     */
     loadDevices() {
         // console.info(this.deviceList);
         for (let device of this.deviceList) {
 
-            if (this.deviceLookup.indexOf(device.id) === -1) {
+            // if (this.deviceLookup.indexOf(device.id) === -1) {
 
                 // console.info(this.swimUrl, `/plant/${device.endpoint_name}`, 'createPlant', device);
                 if (device.state === "registered") {
+                    // notify swim of new plant
                     swimClient.command(this.swimUrl, `/plant/${device.endpoint_name}`, 'createPlant', device);
+                    // delete existing subs
                     this.deleteActiveSubscriptions(device.endpoint_name);
+                    // create new subs
                     this.subscribeToDeviceEndpoints(device.endpoint_name);
+                    // add device in lookup so we know its been created.
                     this.deviceLookup.push(device.id);
                 } else {
+                    // delete existing subs
+                    this.deleteActiveSubscriptions(device.endpoint_name);
+                    this.deviceLookup = this.deviceLookup.filter((value, index, arr) => { return value !== device.id});
                     console.info(`Device ${device.endpoint_name} not registered`);
                 }
                 
-            }
-            // console.info('device', device);
+            // }
         }
     }
 
+    /**
+     * Create a new subscription to each resource endpoint
+     * that is defined in our config file. 
+     * This will both create a Connect API 
+     * subscrition and create a Sensor WebAgent in Swim to 
+     * which will recieve the resource data changes from these 
+     * subscriptions.
+     * @param {*} deviceId 
+     */
     subscribeToDeviceEndpoints(deviceId) {
-        // sub to endpoints
+        // for each endpoint sub and add sensor
         for (const index in this.config.endpoints) {
-            const endpoint = this.config.endpoints[index]
-            console.info("subscribeToDeviceEndpoints", endpoint);
+            const endpoint = this.config.endpoints[index]; // current endpoint config data
+
+            // if current endpoint is enabled
             if (endpoint.enabled) {
+                // save current endpoint into lookup array
                 this.endPointUriLookup[endpoint.subscription.uri] = endpoint;
+                // call to make api subscrptions 
                 this.subscribeToEndpoint(deviceId, endpoint.subscription);
+                // define sensor info for current resource endpoint
                 const msg = {
                     plantId: deviceId,
                     sensorName: endpoint.name,
                     sensorId: endpoint.lane,
                     resourcePath: endpoint.subscription.uri
                 }
+
+                // create new sensor webagent 
                 swimClient.command(this.swimUrl, `/sensor/${deviceId}/${endpoint.lane}`, 'setInfo', msg);
 
             }
         }
     }
 
-    mainLoop() {
-        if (this.showDebug) {
-            // console.info('[main] mainLoop', this.sensorData);
-        }
-
-        if (this.loopTimeout !== null) {
-            clearTimeout(this.loopTimeout);
-        }
-
-        this.loopTimeout = setTimeout(this.mainLoop.bind(this), this.loopInterval);
-    }
-
+    /**
+     * make http DELETE request to connect api to remove active subscritions for an endopint
+     * @param {*} endpointName 
+     */
     deleteActiveSubscriptions(endpointName) {
         console.info('[main] deleteActiveSubscriptions', endpointName);
         this.httpRequest(`/v2/subscriptions/${endpointName}`, '', 'DELETE', (result) => {
@@ -203,6 +241,13 @@ class Main {
         });
     }
 
+    /**
+     * Make http PUt request to subscrbe to changes to a given 
+     * endpoint resource. Also parse the returned async response IDs
+     * so we can make calls back to those resource endpoints later (ex: blink LED)
+     * @param {*} endpointName 
+     * @param {*} endpoint 
+     */
     subscribeToEndpoint(endpointName, endpoint) {
         // console.info('[main] subscribeToEndpoint', endpointName, endpoint);
         this.httpRequest(`/v2/subscriptions/${endpointName}${endpoint.uri}`, '', 'PUT', (result) => {
@@ -236,6 +281,16 @@ class Main {
 
     }
 
+    /**
+     * Make http GET request to ask the Connect API 
+     * to return the current value of a given resource endpoint.
+     * Data will come back in notifcation websocket channel and will
+     * be route to the correct sensor web agent there.
+     * 
+     * @param {*} endpointName 
+     * @param {*} asyncId 
+     * @param {*} uri 
+     */
     getResourceValue(endpointName, asyncId, uri) {
         const msg = `{"method": "GET", "uri": "${uri}"}`;
         console.info("Get resource value", msg);
@@ -244,78 +299,112 @@ class Main {
         });
     }
 
+    /**
+     * handle all messages coming from the 
+     * Connect API websocket connection
+     * 
+     * @param {*} result 
+     */
     handleSocketMessage(result) {
         // console.info("socket message", result);
         if (result !== "CONCURRENT_PULL_REQUEST_RECEIVED" && result !== "URI_PATH_DOES_NOT_EXISTS") {
             try {
+                //convert socker message (result) to JSON
                 const resultData = JSON.parse(result);
-                console.info("SOCKET MESSAGE:", resultData);
+                // console.info("SOCKET MESSAGE:", resultData);
+                //decide how to deal with message based on messge content
                 if (resultData.notifications) {
+                    // message are from notification channel
                     this.parseNotifications(resultData.notifications);
                 } else if (resultData.registrations || resultData["reg-updates"]) {
+                    // message was a device registration change
                     console.info("new device(s) registered");
                     this.getDeviceList();
 
                 } else {
+                    // message was async notification and are handled
+                    // differently from normal notifications because async-ids 
+                    // are needs to maps back to the correct sensor web agent. 
+                    // There can be multiple asinc ids in a message.
                     const asyncNotifs = resultData[Object.keys(resultData)[0]];
-                    console.info('async msg received', result);
+
+                    // for each asunc id notif
                     for (let i = 0; i < asyncNotifs.length; i++) {
                         const currNotif = asyncNotifs[i];
-                        // console.info(currNotif);
+
+                        // find the correct receiver
                         const receiver = (this.asyncIds[currNotif.id]);
                         if (receiver && currNotif.payload) {
+                            //if we have a receiver and a payload, covert payload to Base64
                             const data = Buffer.from(currNotif.payload, 'base64').toString('utf-8');
 
+                            // find the right resource endopint for the message
                             const currEndpoint = this.endPointUriLookup[receiver.uri];
-                            console.info('async notif', receiver, currNotif, currEndpoint);
+                            // console.info('async notif', receiver, currNotif, currEndpoint);
 
+                            // send the Base64 data to the proper Sensor Webagent for the resouce endpoint
                             swimClient.command(this.swimUrl, `/sensor/${currNotif.ep}/${currEndpoint.lane}`, 'setLatest', { sensorData: data });
 
                             console.info(this.swimUrl, `/sensor/${currNotif.ep}/${currEndpoint.lane}`, 'setLatest', { sensorData: data });
-
 
                         }
                     }
                 }
             } catch (ex) {
+                // there was an error so throw it
                 console.info('notification parse error')
                 console.info(ex);
             }
 
 
-        } else {
-            console.info(result)
-        }
+        } 
 
     }
 
+    /**
+     * Parse a list of incoming notifications sent on the websoket
+     * 
+     * @param {*} notifications 
+     */
     parseNotifications(notifications) {
+        // for each notification
         for (let msg of notifications) {
+            // make sure message has a resource path so we know where its from
             if (msg.path) {
+                // convert message data from base64 to utf-8 string
                 const data = Buffer.from(msg.payload, 'base64').toString('utf-8');
+                // find resource endpoint for the message path
                 const currEndpoint = this.endPointUriLookup[msg.path];
-                console.info(msg.path, data);
+                // make sure we found the endoint
                 if (currEndpoint) {
+                    // update the sensor webagent for the resource endopint with the new data
                     swimClient.command(this.swimUrl, `/sensor/${msg.ep}/${currEndpoint.lane}`, 'setLatest', { sensorData: data });
                     console.info(this.swimUrl, `/sensor/${msg.ep}/${currEndpoint.lane}`, 'setLatest', { sensorData: data });
                 } else {
                     console.info("end point not found in lookup:", msg.ep, msg.path);
                 }
-
-
-                // console.info(this.swimUrl, `/sensor/${msg.ep}/${currEndpoint.lane}`, 'setLatest', {sensorData: data});
-                // this.sensorData[currEndpoint.lane] = data;
-                // this.dataChanged = true;
             } else {
                 console.info('no receiver', msg);
 
             }
         }
     }
+   
 
-
+    /**
+     * Utility method to make a HTTP Request and pass
+     * the proper auth headers for the Connect API
+     * 
+     * @param {*} path 
+     * @param {*} data 
+     * @param {*} type 
+     * @param {*} onComplete 
+     * @param {*} onError 
+     */
     httpRequest(path, data, type, onComplete, onError) {
-        console.info("httpRequest", path, data, type)
+        // console.info("httpRequest", path, data, type)
+
+        // create auth header
         const options = {
             hostname: this.apiUrl,
             path: path,
@@ -326,6 +415,7 @@ class Main {
             }
         }
 
+        // create request object
         const req = https.request(options, res => {
             // console.info(res);
             this.httpRes = res;
@@ -335,6 +425,7 @@ class Main {
             })
         })
 
+        // error handler
         req.on('error', error => {
             console.error(error)
             if (onError) {
@@ -343,9 +434,12 @@ class Main {
 
         })
 
+        // send data to server such as for POST or PUT
         if (data) {
             req.write(data);
         }
+
+        // complete request
         req.end()
 
     }

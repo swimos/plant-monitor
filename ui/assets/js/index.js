@@ -32,6 +32,7 @@ class PlantPage {
     this.selectedPlant = null;
     this.charts = [];
     this.plots = [];
+    this.chartPanels = [];
 
     this.tempImg = new Image();
     this.blinkAsyncId = null;
@@ -131,8 +132,10 @@ class PlantPage {
       this.sensorLinks[linkKey] = null;
     }    
 
+    this.sensorLinks = [];
+
     // clear text fields
-    document.getElementById("pressureValue").innerHTML = ``;
+    // document.getElementById("pressureValue").innerHTML = ``;
     document.getElementById("humidityValue").innerHTML = ``;
 
     // reset some member vars
@@ -235,6 +238,7 @@ class PlantPage {
         this.sensorLinks[linkKey].close();
         this.sensorLinks[linkKey] = null;
       }
+      this.sensorLinks = [];
 
       // loop over sensor list and open links to 'latest' and 'shortHistory' lanes for each
       for (let sensor in this.sensorList) {
@@ -255,11 +259,11 @@ class PlantPage {
                 this.tempDial.value(newValue.numberValue(), this.tween);
                 this.tempDial.label(`${newValue.stringValue()}°C`);
                 break;
-              case "pressure":
-                this.pressureDial.value(newValue.numberValue(), this.tween);
-                this.pressureDial.label(`${newValue.stringValue()} mb`);
-                document.getElementById("pressureValue").innerHTML = `${newValue.stringValue()} mb`;
-                break;
+              // case "pressure":
+              //   this.pressureDial.value(newValue.numberValue(), this.tween);
+              //   this.pressureDial.label(`${newValue.stringValue()} mb`);
+              //   document.getElementById("pressureValue").innerHTML = `${newValue.stringValue()} mb`;
+              //   break;
               case "humidity":
                 this.humidityDial.value(newValue.numberValue(), this.tween);
                 this.humidityDial.label(`${newValue.stringValue()}%`);
@@ -301,11 +305,18 @@ class PlantPage {
       // this.mainGauge
       this.mainGauge.removeAll();
       this.mainGauge = null;
+      this.gaugePanel.removeAll();
+      
       this.charts['light'].parentView.removeAll();
+      this.chartPanels['light'].removeAll();
       this.charts['soil'].parentView.removeAll();
+      this.chartPanels['soil'].removeAll();
       this.charts['tempAvg'].parentView.removeAll();
-      this.charts['pressure'].parentView.removeAll();
+      this.chartPanels['tempAvg'].removeAll();
+      // this.charts['pressure'].parentView.removeAll();
+      // this.chartPanels['pressure'].removeAll();
       this.charts['humidity'].parentView.removeAll();
+      this.chartPanels['humidity'].removeAll();
       this.charts = [];
       this.plots = [];
     }
@@ -356,11 +367,11 @@ class PlantPage {
       .meterColor(this.tempColor)
       .label(new swim.TextRunView().textColor("#4a4a4a"));
 
-    this.pressureDial = new swim.DialView()
-      .total(1000)
-      .value(0) 
-      .meterColor(this.pressureColor)
-      .label(new swim.TextRunView().textColor("#4a4a4a"));
+    // this.pressureDial = new swim.DialView()
+    //   .total(1000)
+    //   .value(0) 
+    //   .meterColor(this.pressureColor)
+    //   .label(new swim.TextRunView().textColor("#4a4a4a"));
 
     this.humidityDial = new swim.DialView()
       .total(100)
@@ -372,21 +383,21 @@ class PlantPage {
     this.mainGauge.append(this.lightDial);
     this.mainGauge.append(this.soilDial);
     this.mainGauge.append(this.tempDial);
-    this.mainGauge.append(this.pressureDial);
+    // this.mainGauge.append(this.pressureDial);
     this.mainGauge.append(this.humidityDial);
 
     // append gauge to canvas
     canvas.append(this.mainGauge);
 
     // array of chart names. This is looped over to create history charts
-    const chartList = ['tempAvg', 'light', 'soil', 'pressure', 'humidity'];
+    const chartList = ['tempAvg', 'light', 'soil', 'humidity'];
 
     // loop over chart array and create history charts
     for (let chartKey of chartList) {
       // create chart app view
-      const chartPanel = new swim.HtmlAppView(document.getElementById(`${chartKey}Chart`));
+      this.chartPanels[chartKey] = new swim.HtmlAppView(document.getElementById(`${chartKey}Chart`));
       // append canvas to app view
-      const chartCanvas = chartPanel.append("canvas");
+      const chartCanvas = this.chartPanels[chartKey].append("canvas");
 
       const lineColor = "#fff";
       this.charts[chartKey] = new swim.ChartView()
@@ -418,9 +429,9 @@ class PlantPage {
         case 'tempAvg':
           this.plots[chartKey].stroke(this.tempColor);
           break;
-        case 'pressure':
-          this.plots[chartKey].stroke(this.pressureColor);
-          break;
+        // case 'pressure':
+        //   this.plots[chartKey].stroke(this.pressureColor);
+        //   break;
         case 'humidity':
           this.plots[chartKey].stroke(this.humidityColor);
           break;

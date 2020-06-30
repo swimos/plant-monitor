@@ -50,11 +50,22 @@ h6 {
 .main {
   max-width: 1024px;
   min-width: 620px;
-  margin: 10px auto 50px auto;
+  margin: 0px auto 50px auto;
   display: grid;
-  grid-template-columns: 25% 75%;
-  grid-gap: 10px;
+  grid-template-columns: 45% 55%;
+  grid-template-rows: 50% 50%;
+  grid-gap: 5px;
 }
+
+.chartsSection { 
+  grid-area: 1 / 2 / 3 / 5; 
+}
+
+.gauge { 
+  grid-area: 1 / 1 / 2 / 2; 
+}
+
+.plantListColumn { grid-area: 2 / 1 / 3 / 2; }
 
 .sim {
   width: 600px;
@@ -62,10 +73,9 @@ h6 {
 }
 
 .chartsSection {
-  grid-column: 1 / span 2;
   display: grid;
-  grid-template-columns: auto auto auto;  
-  grid-gap: 10px;
+  grid-template-columns: auto;  
+  grid-gap: 5px;
 }
 
 @media only screen and (max-width: 800px) {
@@ -75,17 +85,21 @@ h6 {
   }
 }
 
+canvas {
+  pointer-events: none;  
+}
 
 input,
 select {
-  background-color: white;
+  background-color: rgba(255,255,255,0.4);
   color: #000000;
   border: 0px;
   padding: 3px 10px;
   margin: 0px;
-  border-radius: 8px;
+  border-radius: 5px;
   box-shadow: 0px 0px 3px inset rgba(0,0,0,0.4);
   transition: 100ms linear;
+  font-size: 14px;
 }
 
 select:focus {
@@ -93,7 +107,7 @@ select:focus {
 }
 
 input[type="button"]:hover {
-  background-color: dodgerblue;
+  background-color: rgba(255,255,255,0.9);
 }
 
 .statusHeader {
@@ -102,13 +116,36 @@ input[type="button"]:hover {
 
 .chartRow {
   width: 100%; 
-  height: 192px;
-  width: 384;
+  height: 150px;
   margin-bottom: 10px;
 }
 
 .plantList {
   grid-row: 1 /span 2;
+}
+
+.plantHeader {
+  padding: 0px;
+  height: 31px;
+}
+
+#plantNameHeader {
+  padding: 4px;
+  text-align: center;
+}
+
+.plantListColumns {
+  display: grid;
+  grid-template-columns: 1fr 0.2fr;
+  height: 20px;
+  color: black;
+  font-size: 12px;
+  grid-gap: 2px;
+}
+
+.plantListColumns div {
+  background-color: rgba(255,255,255,0.8);
+  padding: 0px 5px;
 }
 
 #plantListingDiv span, #alertListingDiv span {
@@ -118,7 +155,7 @@ input[type="button"]:hover {
 }
 
 #plantListingDiv b, #alertListingDiv b {
-  text-align: right;
+  text-align: center;
 }
 
 #plantListingDiv div:hover {
@@ -144,23 +181,24 @@ input[type="button"]:hover {
 
 #plantListingDiv div, #alertListingDiv div {
   display: grid;
-  grid-template-columns: auto 30px;
+  grid-template-columns: 1fr 0.2fr;
+}
+
+#plantListingDiv div:nth-child(even) {
+  background-color: rgba(255,255,255,0.1);
+
 }
 
 .selectedRow {
-  background-color:rgba(200,200,200,0.2);
+  background-color:rgba(100,100,255,0.2) !important;
 }
 .plantListColumn {
   display: grid;
   grid-template-rows: 32px auto 32px 300px;
 }
 
-.plantListColumn div {
-  overflow: auto;
-}
-
 .plantButtons {
-  position: relative;
-  margin: -50px auto;
-  text-align: center;  
+  margin: -45px auto;
+  text-align: center;
+  z-index: 1;
 }

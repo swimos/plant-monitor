@@ -40,21 +40,27 @@
 	<main class="main" id="main">
 		<div class="plantListColumn">
 			<h4>Plant List</h4>
+			<div class="plantListColumns">
+				<div>Plant Name</div>
+				<div style="text-align: center;">Alerts</div>
+			</div>
 			<div id="plantListingDiv">
 
 			</div>
 
 		</div>
-        <div>
-            <h4 id="plantNameHeader">Plant</h4>
+        <div class="gauge">
+            <h4 class="plantHeader">
+				<div id="plantNameHeader">Plant</div>			
+			</h4>
             <div style="width: 100%; height: calc(100% - 31px);" id="soilGauge">
             
 			</div>
 			<div class="plantButtons">
 				<input type="button" value="Blink LED" onclick="page.blinkLed()">
 				<input type="button" value="Change Pattern" onclick="page.changePattern()">
-
 			</div>
+
         </div>
 
         <div class="chartsSection">
@@ -73,10 +79,12 @@
 				<div class="chartRow" id="tempAvgChart"></div>
 			</div>
 
+			<!--
 			<div>
 				<h4>Pressure <span id="pressureValue">0</span></h4>
 				<div class="chartRow" id="pressureChart"></div>
 			</div>
+			-->
 
 			<div>
 				<h4>Humidity <span id="humidityValue">0</span></h4>

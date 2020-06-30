@@ -61,16 +61,6 @@
              
         },
         {
-            "name": "Pressure",
-            "lane": "pressure",
-            "enabled": true,
-            "subscription": {
-                "uri": "/3203/0/5513", 
-                "obs": true                
-            }
-             
-        },
-        {
             "name": "Humidity",
             "lane": "humidity",
             "enabled": true,

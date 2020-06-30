@@ -214,8 +214,29 @@ void button_callback(MbedCloudClientResource *resource, const NoticationDelivery
 }
 
 void light_callback(MbedCloudClientResource *resource, const NoticationDeliveryStatus status) {
-    printf("Light notification, status %s (%d)\n", MbedCloudClientResource::delivery_status_to_string(status), status);
+    sensor_callback("Light", resource, status);
 }
+
+void soil_callback(MbedCloudClientResource *resource, const NoticationDeliveryStatus status) {
+    sensor_callback("Soil", resource, status);
+}
+
+void temp_callback(MbedCloudClientResource *resource, const NoticationDeliveryStatus status) {
+    sensor_callback("Temp", resource, status);
+}
+
+void pressure_callback(MbedCloudClientResource *resource, const NoticationDeliveryStatus status) {
+    sensor_callback("Pressure", resource, status);
+}
+
+void humidity_callback(MbedCloudClientResource *resource, const NoticationDeliveryStatus status) {
+    sensor_callback("Humidity", resource, status);
+}
+
+void sensor_callback(String sensorName, MbedCloudClientResource *resource, const NoticationDeliveryStatus status) {
+    printf("%s notification, status %s (%d)\n",sensorName,  MbedCloudClientResource::delivery_status_to_string(status), status);
+}
+
 
 /**
  * Registration callback handler
@@ -275,11 +296,13 @@ int main() {
     soil_res->set_value(50);
     soil_res->methods(M2MMethod::GET);
     soil_res->observable(true);
+    soil_res->attach_notification_callback(soil_callback);
 
     temp_res = client.create_resource("/3203/0/5512", "temp_level");
     temp_res->set_value(50);
     temp_res->methods(M2MMethod::GET);
     temp_res->observable(true);
+    temp_res->attach_notification_callback(temp_callback);
 
     pressure_res = client.create_resource("/3203/0/5513", "pressure_level");
     pressure_res->set_value(1000);

@@ -17,19 +17,19 @@ import swim.structure.Value;
 
 public class AggregationService extends AbstractAgent {
 
-    @SwimLane("plantList")
-    MapLane<String, Value> plantList = this.<String, Value>mapLane();
-  
-    @SwimLane("plantAlerts")
-    MapLane<String, Value> plantAlerts = this.<String, Value>mapLane();
+  @SwimLane("plantList")
+  MapLane<String, Value> plantList = this.<String, Value>mapLane();
 
-    @SwimLane("addPlant")
-    CommandLane<Value> addPlantCommand = this.<Value>commandLane().onCommand(plantData -> {
-      String plantId = plantData.get("id").stringValue("none");
-      if (plantId != "none") {
-        plantList.put(plantId, plantData);
-      }  
-    });
+  @SwimLane("plantAlerts")
+  MapLane<String, Value> plantAlerts = this.<String, Value>mapLane();
+
+  @SwimLane("addPlant")
+  CommandLane<Value> addPlantCommand = this.<Value>commandLane().onCommand(plantData -> {
+    String plantId = plantData.get("id").stringValue("none");
+    if (plantId != "none") {
+      plantList.put(plantId, plantData);
+    }  
+  });
 
   @SwimLane("addAlert")
   CommandLane<Value> addAlertCommand = this.<Value>commandLane()
@@ -47,8 +47,8 @@ public class AggregationService extends AbstractAgent {
       this.plantAlerts.remove(sensorId.stringValue());
     });
 
-    @Override
-    public void didStart() {
-    }
+  @Override
+  public void didStart() {
+  }
   
 }
