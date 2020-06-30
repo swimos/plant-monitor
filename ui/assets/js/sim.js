@@ -53,7 +53,7 @@ class Sim {
       .didSync(() => {
         if (!this.plantListSynced) {
           this.plantListSynced = true;
-          this.selectPlant(Object.keys(this.plantList)[0]);
+          // this.selectPlant(Object.keys(this.plantList)[0]);
         }
         this.alertListLink.open();
       });
@@ -196,7 +196,7 @@ class Sim {
 
       // close any open swim links
       for (let linkKey in this.sensorLinks) {
-        console.info("close sensor link", linkKey);
+        // console.info("close sensor link", linkKey);
         if(this.sensorLinks[linkKey]) {
           this.sensorLinks[linkKey].close();
         }        
@@ -221,16 +221,15 @@ class Sim {
                 document.getElementById("tempAvgValue").value = `${newValue.stringValue()}`;
                 document.getElementById("tempAvgRange").value = `${newValue.stringValue()}`;
                 break;
-              case "pressure":
-                document.getElementById("pressureValue").value = `${newValue.stringValue()}`;
-                document.getElementById("pressureRange").value = `${newValue.stringValue()}`;
-                break;
               case "humidity":
                 document.getElementById("humidityValue").value = `${newValue.stringValue()}`;
                 document.getElementById("humidityRange").value = `${newValue.stringValue()}`;
                 break;
       
             }
+          })
+          .didSync(() => {
+            this.sensorLinks[`sensor-${sensor}-latest`].close();
           })
 
       }
@@ -243,45 +242,6 @@ class Sim {
 
     }    
   }
-
-  // startSensorListener(plantId, sensorId) {
-  //   this.links[`sensor-${sensorId}-latest`] = swim.nodeRef(this.swimUrl, `/sensor/${plantId}/${sensorId}`).downlinkValue().laneUri('latest')
-  //     .didSet((newValue, oldValue) => {
-  //       this.handleSensorChange(newValue, sensorId);
-  //     })
-  //     .open();
-
-  // }
-
-  // handleSensorChange(newValue, sensorId) {
-  //   this.sensorList[sensorId] = newValue;
-  //   this.plantHealthAvg = Math.round((parseInt(this.sensorData.light) + parseInt(this.sensorData.soil) + parseInt(this.sensorData.tempAvg)) / 3);
-  //   if (this.keepSynced) {
-  //     switch (sensorId) {
-  //       case "soil":
-  //         document.getElementById("soilValue").value = `${newValue.stringValue()}`;
-  //         document.getElementById("soilRange").value = `${newValue.stringValue()}`;
-  //         break;
-  //       case "light":
-  //         document.getElementById("lightValue").value = `${newValue.stringValue()}`;
-  //         document.getElementById("lightRange").value = `${newValue.stringValue()}`;
-  //         break;
-  //       case "tempAvg":
-  //         document.getElementById("tempAvgValue").value = `${newValue.stringValue()}`;
-  //         document.getElementById("tempAvgRange").value = `${newValue.stringValue()}`;
-  //         break;
-  //       case "pressure":
-  //         document.getElementById("pressureValue").value = `${newValue.stringValue()}`;
-  //         document.getElementById("pressureRange").value = `${newValue.stringValue()}`;
-  //         break;
-  //       case "humidity":
-  //         document.getElementById("humidityValue").value = `${newValue.stringValue()}`;
-  //         document.getElementById("humidityRange").value = `${newValue.stringValue()}`;
-  //         break;
-
-  //     }
-  //   }
-  // }
 
   handleSubmit(formObj) {
     const plantId = document.getElementById("plantIdValue").value
@@ -298,7 +258,6 @@ class Sim {
       swim.command(this.swimUrl, `/sensor/${plantId}/light`, 'setInfo', { sensorId: 'light', sensorName: "Light", "plantId": plantId });
       swim.command(this.swimUrl, `/sensor/${plantId}/soil`, 'setInfo', { sensorId: 'soil', sensorName: "Soil", "plantId": plantId });
       swim.command(this.swimUrl, `/sensor/${plantId}/tempAvg`, 'setInfo', { sensorId: 'tempAvg', sensorName: "Temp", "plantId": plantId });
-      swim.command(this.swimUrl, `/sensor/${plantId}/pressure`, 'setInfo', { sensorId: 'pressure', sensorName: "Pressure", "plantId": plantId });
       swim.command(this.swimUrl, `/sensor/${plantId}/humidity`, 'setInfo', { sensorId: 'humidity', sensorName: "Humidity", "plantId": plantId });
     } else {
       console.info("Existing Plant");
@@ -317,7 +276,6 @@ class Sim {
     this.sensorData['light'] = document.getElementById("lightValue").value || 1;
     this.sensorData['soil'] = document.getElementById("soilValue").value || 1;
     this.sensorData['tempAvg'] = document.getElementById("tempAvgValue").value || 1;
-    this.sensorData['pressure'] = document.getElementById("pressureValue").value || 1;
     this.sensorData['humidity'] = document.getElementById("humidityValue").value || 1;
 
   }

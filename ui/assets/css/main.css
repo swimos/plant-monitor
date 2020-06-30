@@ -70,19 +70,17 @@ h6 {
 .sim {
   width: 600px;
   grid-template-columns: 200px auto;
+  grid-template-rows: 1fr;
+}
+
+.sim input {
+  background-color: white;
 }
 
 .chartsSection {
   display: grid;
   grid-template-columns: auto;  
   grid-gap: 5px;
-}
-
-@media only screen and (max-width: 800px) {
-  .chartsSection {
-    display: flex;
-    flex-direction: column;
-  }
 }
 
 canvas {
