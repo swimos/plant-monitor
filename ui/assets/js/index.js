@@ -26,8 +26,7 @@ class PlantPage {
     this.soilColor = swim.Color.rgb(14, 173, 105);
     this.lightColor = swim.Color.rgb(255, 210, 63);
     this.tempColor = swim.Color.rgb(238, 66, 102);
-    this.pressureColor = swim.Color.rgb(117, 69, 115)
-    this.humidityColor = swim.Color.rgb(79, 121, 162)
+    this.humidityColor = swim.Color.rgb(79, 121, 162);
 
     this.selectedPlant = null;
     this.charts = [];
@@ -135,8 +134,16 @@ class PlantPage {
     this.sensorLinks = [];
 
     // clear text fields
-    // document.getElementById("pressureValue").innerHTML = ``;
+    document.getElementById("lightValue").innerHTML = ``;
+    document.getElementById("soilValue").innerHTML = ``;
+    document.getElementById("tempAvgValue").innerHTML = ``;
     document.getElementById("humidityValue").innerHTML = ``;
+    document.getElementById("lightThreshold").innerHTML = `0`;
+    document.getElementById("soilThreshold").innerHTML = `0`;
+    document.getElementById("tempAvgThreshold").innerHTML = `0`;
+    document.getElementById("humidityThreshold").innerHTML = `0`;
+    document.getElementById("plantNameHeader").innerHTML = `No Plant Selected`;
+    
 
     // reset some member vars
     this.links = {};
@@ -234,7 +241,6 @@ class PlantPage {
 
       // close any open swim links
       for (let linkKey in this.sensorLinks) {
-        console.info("close sensor link", linkKey);
         this.sensorLinks[linkKey].close();
         this.sensorLinks[linkKey] = null;
       }
@@ -242,6 +248,8 @@ class PlantPage {
 
       // loop over sensor list and open links to 'latest' and 'shortHistory' lanes for each
       for (let sensor in this.sensorList) {
+
+        // create swim link for latest value of current sensor
         this.sensorLinks[`sensor-${sensor}-latest`] = swim.nodeRef(this.swimUrl, `/sensor/${plantId}/${sensor}`).downlinkValue().laneUri('latest')
           .didSet((newValue, oldValue) => {
             switch (sensor) {
@@ -249,21 +257,19 @@ class PlantPage {
                 this.soilDial.value(newValue.numberValue(), this.tween);
                 const labelValue1 = newValue.stringValue();
                 this.soilDial.label(`${labelValue1}%`);
+                document.getElementById("soilValue").innerHTML = `${labelValue1}%`;
                 break;
               case "light":
                 this.lightDial.value(newValue.numberValue(), this.tween);
                 const labelValue2 = newValue.stringValue();
                 this.lightDial.label(`${labelValue2}%`);
+                document.getElementById("lightValue").innerHTML = `${labelValue2}%`;
                 break;
               case "tempAvg":
                 this.tempDial.value(newValue.numberValue(), this.tween);
                 this.tempDial.label(`${newValue.stringValue()}°C`);
+                document.getElementById("tempAvgValue").innerHTML = `${newValue.stringValue()}%`;
                 break;
-              // case "pressure":
-              //   this.pressureDial.value(newValue.numberValue(), this.tween);
-              //   this.pressureDial.label(`${newValue.stringValue()} mb`);
-              //   document.getElementById("pressureValue").innerHTML = `${newValue.stringValue()} mb`;
-              //   break;
               case "humidity":
                 this.humidityDial.value(newValue.numberValue(), this.tween);
                 this.humidityDial.label(`${newValue.stringValue()}%`);
@@ -273,6 +279,28 @@ class PlantPage {
             }
           })
 
+        // create swim link for latest value of current sensor
+        this.sensorLinks[`sensor-${sensor}-threshold`] = swim.nodeRef(this.swimUrl, `/sensor/${plantId}/${sensor}`).downlinkValue().laneUri('threshold')
+          .didSet((newValue, oldValue) => {
+            switch (sensor) {
+              case "soil":
+                document.getElementById("soilThreshold").innerHTML = `${newValue.stringValue()}%`;
+                break;
+              case "light":
+                document.getElementById("lightThreshold").innerHTML = `${newValue.stringValue()}%`;
+                break;
+              case "tempAvg":
+                document.getElementById("tempAvgThreshold").innerHTML = `${newValue.stringValue()}°C`;
+                break;
+              case "humidity":
+                document.getElementById("humidityThreshold").innerHTML = `${newValue.stringValue()}%`;
+                break;
+
+            }
+
+          });
+
+        // create swim link to get timeline history of current sensor value
         this.sensorLinks[`sensor-${sensor}-history`] = swim.nodeRef(this.swimUrl, `/sensor/${plantId}/${sensor}`).downlinkMap().laneUri('shortHistory')
           .didUpdate((timestamp, sensorvalue) => {
             if (this.plots[sensor]) {
@@ -290,7 +318,6 @@ class PlantPage {
 
       // re-open new links
       for (let linkKey in this.sensorLinks) {
-        console.info("open sensor link", linkKey);
         this.sensorLinks[linkKey].open();
       }      
 
@@ -313,8 +340,6 @@ class PlantPage {
       this.chartPanels['soil'].removeAll();
       this.charts['tempAvg'].parentView.removeAll();
       this.chartPanels['tempAvg'].removeAll();
-      // this.charts['pressure'].parentView.removeAll();
-      // this.chartPanels['pressure'].removeAll();
       this.charts['humidity'].parentView.removeAll();
       this.chartPanels['humidity'].removeAll();
       this.charts = [];
@@ -367,12 +392,6 @@ class PlantPage {
       .meterColor(this.tempColor)
       .label(new swim.TextRunView().textColor("#4a4a4a"));
 
-    // this.pressureDial = new swim.DialView()
-    //   .total(1000)
-    //   .value(0) 
-    //   .meterColor(this.pressureColor)
-    //   .label(new swim.TextRunView().textColor("#4a4a4a"));
-
     this.humidityDial = new swim.DialView()
       .total(100)
       .value(0) 
@@ -383,7 +402,6 @@ class PlantPage {
     this.mainGauge.append(this.lightDial);
     this.mainGauge.append(this.soilDial);
     this.mainGauge.append(this.tempDial);
-    // this.mainGauge.append(this.pressureDial);
     this.mainGauge.append(this.humidityDial);
 
     // append gauge to canvas
@@ -429,9 +447,6 @@ class PlantPage {
         case 'tempAvg':
           this.plots[chartKey].stroke(this.tempColor);
           break;
-        // case 'pressure':
-        //   this.plots[chartKey].stroke(this.pressureColor);
-        //   break;
         case 'humidity':
           this.plots[chartKey].stroke(this.humidityColor);
           break;
@@ -500,6 +515,38 @@ class PlantPage {
       xhttp.send(msg);
     } else {
       alert("Select a device");
+    }
+  }
+
+  /**
+   * Change the alert threshold value for one or more sensors
+   * 
+   * @param {*} sensorId 
+   */
+  changeThreshold(sensorId) {
+    if (this.selectedPlant !== null) {
+      const newValue = prompt("Enter a new threshold value.\n(0-100)");
+
+      // make sure we have a value
+      if(newValue == "" || newValue == null) {
+        return;
+      }
+
+      // if passed a specific sensor, update that one
+      // otherwise update all sensors
+      if(sensorId) {
+        swim.command(this.swimUrl, `/sensor/${this.selectedPlant.id}/${sensorId}`, 'setThreshold', newValue);
+      } else {
+        if(newValue >= 1 && newValue <= 100) {
+          for (let sensor in this.sensorList) {
+            //this.sensorLinks[`sensor-${sensor}-latest`] = swim.nodeRef(this.swimUrl, `/sensor/${plantId}/${sensor}`).downlinkValue().laneUri('latest')
+            swim.command(this.swimUrl, `/sensor/${this.selectedPlant.id}/${sensor}`, 'setThreshold', newValue);
+          }
+    
+        }
+      }
+
+
     }
   }
 }

@@ -65,7 +65,28 @@ h6 {
   grid-area: 1 / 1 / 2 / 2; 
 }
 
-.plantListColumn { grid-area: 2 / 1 / 3 / 2; }
+.plantListColumn { 
+  grid-area: 2 / 1 / 3 / 2; 
+  display: grid;
+  grid-template-rows: 32px 20px auto;
+}
+
+.chartHeader {
+  display: grid;
+  grid-template-columns: 70% 30%;
+}
+
+.chartHeader div:nth-child(even) {
+  text-align: right;
+  cursor: pointer;
+}
+
+.chartHeader div:hover:nth-child(even) {
+  text-align: right;
+  cursor: pointer;
+  background-color: rgba(255,255,255,0.2);
+}
+
 
 .sim {
   width: 600px;
@@ -189,10 +210,6 @@ input[type="button"]:hover {
 
 .selectedRow {
   background-color:rgba(100,100,255,0.2) !important;
-}
-.plantListColumn {
-  display: grid;
-  grid-template-rows: 32px auto 32px 300px;
 }
 
 .plantButtons {
