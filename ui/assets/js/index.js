@@ -34,8 +34,6 @@ class PlantPage {
     this.chartPanels = [];
 
     this.tempImg = new Image();
-    this.blinkAsyncId = null;
-    this.patternAsyncId = null;
   }
 
   /**
@@ -184,24 +182,6 @@ class PlantPage {
 
       })
 
-    // link to get async id to update plant blink pattern
-    this.links['blinkAsyncId'] = swim.nodeRef(this.swimUrl, `/sensor/${plantId}/blinkAction`).downlinkValue().laneUri('asyncId')
-      .didSet((newData, oldData) => {
-        if (newData.isDefined()) {
-          this.blinkAsyncId = newData.stringValue();
-        }
-
-      })
-
-    // link to get async id to send blink led command
-    this.links['patternAsyncId'] = swim.nodeRef(this.swimUrl, `/sensor/${plantId}/blinkPattern`).downlinkValue().laneUri('asyncId')
-      .didSet((newData, oldData) => {
-        if (newData.isDefined()) {
-          this.patternAsyncId = newData.stringValue();
-        }
-
-      })
-
     // link to get list of alert for selected plant
     this.links['alertList'] = swim.nodeRef(this.swimUrl, `/plant/${plantId}`).downlinkMap().laneUri('alertList')
       .didUpdate((key, value) => {
@@ -246,7 +226,7 @@ class PlantPage {
       }
       this.sensorLinks = [];
 
-      // loop over sensor list and open links to 'latest' and 'shortHistory' lanes for each
+      // loop over sensor list and open links to 'latest' and 'history' lanes for each
       for (let sensor in this.sensorList) {
 
         // create swim link for latest value of current sensor
@@ -301,7 +281,7 @@ class PlantPage {
           });
 
         // create swim link to get timeline history of current sensor value
-        this.sensorLinks[`sensor-${sensor}-history`] = swim.nodeRef(this.swimUrl, `/sensor/${plantId}/${sensor}`).downlinkMap().laneUri('shortHistory')
+        this.sensorLinks[`sensor-${sensor}-history`] = swim.nodeRef(this.swimUrl, `/sensor/${plantId}/${sensor}`).downlinkMap().laneUri('history')
           .didUpdate((timestamp, sensorvalue) => {
             if (this.plots[sensor]) {
               this.plots[sensor].insertDatum({ x: timestamp.numberValue(), y: sensorvalue.numberValue(), opacity: 1 });
@@ -466,53 +446,9 @@ class PlantPage {
    * Send blink LED command to pelion device
    */
   blinkLed() {
-    if (this.selectedPlant !== null && this.blinkAsyncId) {
-      var xhttp = new XMLHttpRequest();
-      let msg = JSON.stringify({ "method": "POST", "uri": "/3201/0/5850" });
-      let str = `https://api.us-east-1.mbedcloud.com/v2/device-requests/${this.selectedPlant.id}?async-id=${this.blinkAsyncId}`
+    if (this.selectedPlant !== null) {
+      swim.command(this.swimUrl, `/plant/${this.selectedPlant.id}`, 'blinkLed', swim.Value.absent());
 
-      xhttp.open('POST', str, true)
-      xhttp.setRequestHeader("Content-type", "application/json");
-      xhttp.setRequestHeader("Authorization", "Bearer ak_1MDE3MjI5MWVlZWVhN2ExZTNkYzEyYWU3MDAwMDAwMDA01722982f11bceef6448061800000000hHrp7q2Ow4TeYe9x5SkkOCJ28GBIRThK");
-      xhttp.onreadystatechange = function () {
-        if (this.readyState == 4) {
-          if (this.status == 202) {
-            console.info("Command sent");
-          } else {
-            console.info("could not send command", this)
-          }
-        }
-      };
-      xhttp.send(msg);
-    } else {
-      alert("Select a device");
-    }
-  }
-
-  /**
-   * Send command to change blink pattern to pelion device
-   */
-  changePattern() {
-    if (this.selectedPlant !== null && this.patternAsyncId) {
-      const newPattern = prompt("Enter new pattern");
-
-      var xhttp = new XMLHttpRequest();
-      let msg = `{"method": "PUT", "uri": "/3201/0/5853", "accept": "text/plain", "content-type": "text/plain", "payload-b64": "${btoa(newPattern)}"}`;
-      let str = `https://api.us-east-1.mbedcloud.com/v2/device-requests/${this.selectedPlant.id}?async-id=${this.patternAsyncId}`
-
-      xhttp.open('POST', str, true)
-      xhttp.setRequestHeader("Content-type", "application/json");
-      xhttp.setRequestHeader("Authorization", "Bearer ak_1MDE3MjI5MWVlZWVhN2ExZTNkYzEyYWU3MDAwMDAwMDA01722982f11bceef6448061800000000hHrp7q2Ow4TeYe9x5SkkOCJ28GBIRThK");
-      xhttp.onreadystatechange = function () {
-        if (this.readyState == 4) {
-          if (this.status == 202) {
-            console.info("Command sent");
-          } else {
-            console.info("could not send command", this)
-          }
-        }
-      };
-      xhttp.send(msg);
     } else {
       alert("Select a device");
     }
@@ -549,4 +485,5 @@ class PlantPage {
 
     }
   }
+
 }

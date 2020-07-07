@@ -52,18 +52,18 @@ class Main {
 
         // delete any existing callbacks 
         this.httpRequest('/v2/notification/callback', '', 'DELETE', (result) => {
-            console.info("delete /v2/notification/callback result:", result);
+            this.info("delete /v2/notification/callback result:", result);
         });
         this.httpRequest('/v2/notification/pull', '', 'DELETE', (result) => {
-            console.info("delete /v2/notification/pull result:", result);
+            this.info("delete /v2/notification/pull result:", result);
         });
         this.httpRequest('/v2/notification/websocket', '', 'DELETE', (result) => {
-            console.info("delete /v2/notification/websocket result:", result);
+            this.info("delete /v2/notification/websocket result:", result);
         });
 
         // create a subscription to get notifications over sockets
         this.httpRequest('/v2/notification/websocket', '', 'PUT', (result) => {
-            console.info("create socket request result:", result);
+            this.info("create socket request result:", result);
             // open websocket to get notifitcations
             this.openSocket();
         });
@@ -80,22 +80,22 @@ class Main {
         this.websocket = new WebSocketClient();
 
         this.websocket.on('connectFailed', (error) => {
-            console.log('Connect Error: ' + error.toString());
-            console.info(`api url ${this.apiUrl}`);
+            this.info('Connect Error: ' + error.toString());
+            this.info(`api url ${this.apiUrl}`);
         });
 
         // create onConnect handler
         this.websocket.on('connect', (connection) => {
-            console.log('WebSocket Client Connected');
+            this.info('WebSocket Client Connected');
             
             // start loading devices now that we have a socket connection
             this.getDeviceList();
 
             connection.on('error', (error) => {
-                console.log("Connection Error: " + error.toString());
+                this.info("Connection Error: " + error.toString());
             });
             connection.on('close', (msg) => {
-                console.log('WebSocket Connection Closed', msg);
+                this.info('WebSocket Connection Closed', msg);
                 // wait 30 seconds and reconnect
                 setTimeout(() => {
                     this.start();
@@ -103,7 +103,7 @@ class Main {
             });
             connection.on('message', (message) => {
                 if (message.type === 'utf8') {
-                    // console.log("Received: '" + message.utf8Data + "'");
+                    // this.info("Received: '" + message.utf8Data + "'");
                     this.handleSocketMessage(message.utf8Data);
                 }
             });
@@ -125,7 +125,7 @@ class Main {
      * Get list of Devices from Connect API
      */
     getDeviceList() {
-        console.info('[main] getDeviceList');
+        this.info('[main] getDeviceList');
         this.httpRequest('/v3/devices', '', 'GET', (result) => {
 
             // covert result into json
@@ -136,7 +136,7 @@ class Main {
             // if first and last charts are brackets, parse as json 
             // otherwise buffer message until first/last brackets are found
             if (firstChar === '{' && lastChar === '}') {
-                console.info("Device list loaded without buffering");
+                this.info("Device list loaded without buffering");
                 resultData = JSON.parse(result); // parse message                
                 this.deviceList = resultData.data; // store parsed list as this.deviceList
                 this.loadDevices(); // load devices from api
@@ -147,7 +147,7 @@ class Main {
 
                 // first last brackets found in buffer so convert to json
                 if (firstChar === '{' && lastChar === '}') {
-                    console.info("Device list loaded by buffering messages");
+                    this.info("Device list loaded by buffering messages");
                     resultData = JSON.parse(this.msgBuffer); // parse buffer                    
                     this.deviceList = resultData.data; // store parsed list as this.deviceList
                     this.msgBuffer = ''; // reset string buffer
@@ -169,12 +169,12 @@ class Main {
      * 4. update our device lookup with id so we know we have created subs
      */
     loadDevices() {
-        // console.info(this.deviceList);
+        // this.info(this.deviceList);
         for (let device of this.deviceList) {
 
             // if (this.deviceLookup.indexOf(device.id) === -1) {
 
-                // console.info(this.swimUrl, `/plant/${device.endpoint_name}`, 'createPlant', device);
+                // this.info(this.swimUrl, `/plant/${device.endpoint_name}`, 'createPlant', device);
                 if (device.state === "registered") {
                     // notify swim of new plant
                     swimClient.command(this.swimUrl, `/plant/${device.endpoint_name}`, 'createPlant', device);
@@ -188,7 +188,7 @@ class Main {
                     // delete existing subs
                     this.deleteActiveSubscriptions(device.endpoint_name);
                     this.deviceLookup = this.deviceLookup.filter((value, index, arr) => { return value !== device.id});
-                    console.info(`Device ${device.endpoint_name} not registered`);
+                    this.info(`Device ${device.endpoint_name} not registered`);
                 }
                 
             // }
@@ -235,9 +235,9 @@ class Main {
      * @param {*} endpointName 
      */
     deleteActiveSubscriptions(endpointName) {
-        console.info('[main] deleteActiveSubscriptions', endpointName);
+        this.info('[main] deleteActiveSubscriptions', endpointName);
         this.httpRequest(`/v2/subscriptions/${endpointName}`, '', 'DELETE', (result) => {
-            console.info('deleteActiveSubscriptions', result);
+            this.info('deleteActiveSubscriptions', result);
         });
     }
 
@@ -249,9 +249,9 @@ class Main {
      * @param {*} endpoint 
      */
     subscribeToEndpoint(endpointName, endpoint) {
-        // console.info('[main] subscribeToEndpoint', endpointName, endpoint);
+        // this.info('[main] subscribeToEndpoint', endpointName, endpoint);
         this.httpRequest(`/v2/subscriptions/${endpointName}${endpoint.uri}`, '', 'PUT', (result) => {
-            console.info('[main] subscribeToEndpoint', result);
+            this.info('[main] subscribeToEndpoint', result);
             let firstChar = result.charAt(0);
             let lastChar = result.charAt(result.length - 1);
 
@@ -268,12 +268,12 @@ class Main {
 
                 const currEndpoint = this.endPointUriLookup[endpoint.uri];
                 swimClient.command(this.swimUrl, `/sensor/${endpointName}/${currEndpoint.lane}`, 'setAsyncId', newId);
-                // console.info(this.swimUrl, `/sensor/${endpointName}/${currEndpoint.lane}`, 'setAsyncId', newId);
+                // this.info(this.swimUrl, `/sensor/${endpointName}/${currEndpoint.lane}`, 'setAsyncId', newId);
                 // swimClient.command(this.swimUrl, `/sensor/${endpointName}/${currEndpoint.lane}`, 'setLatest', {sensorData: 0});
 
             } else {
-                console.info(`Endpoint ${endpointName} for ${endpoint.uri} had a connection error`);
-                console.info(result);
+                this.info(`Endpoint ${endpointName} for ${endpoint.uri} had a connection error`);
+                this.info(result);
             }
 
 
@@ -293,9 +293,9 @@ class Main {
      */
     getResourceValue(endpointName, asyncId, uri) {
         const msg = `{"method": "GET", "uri": "${uri}"}`;
-        console.info("Get resource value", msg);
+        this.info("Get resource value", msg);
         this.httpRequest(`/v2/device-requests/${endpointName}?async-id=${asyncId}`, msg, 'POST', (result) => {
-            console.info("getResourceValue", result);
+            this.info("getResourceValue", result);
         });
     }
 
@@ -306,19 +306,19 @@ class Main {
      * @param {*} result 
      */
     handleSocketMessage(result) {
-        // console.info("socket message", result);
+        // this.info("socket message", result);
         if (result !== "CONCURRENT_PULL_REQUEST_RECEIVED" && result !== "URI_PATH_DOES_NOT_EXISTS") {
             try {
                 //convert socker message (result) to JSON
                 const resultData = JSON.parse(result);
-                // console.info("SOCKET MESSAGE:", resultData);
+                // this.info("SOCKET MESSAGE:", resultData);
                 //decide how to deal with message based on messge content
                 if (resultData.notifications) {
                     // message are from notification channel
                     this.parseNotifications(resultData.notifications);
                 } else if (resultData.registrations || resultData["reg-updates"]) {
                     // message was a device registration change
-                    console.info("new device(s) registered");
+                    this.info("new device(s) registered");
                     this.getDeviceList();
 
                 } else {
@@ -340,20 +340,20 @@ class Main {
 
                             // find the right resource endopint for the message
                             const currEndpoint = this.endPointUriLookup[receiver.uri];
-                            // console.info('async notif', receiver, currNotif, currEndpoint);
+                            // this.info('async notif', receiver, currNotif, currEndpoint);
 
                             // send the Base64 data to the proper Sensor Webagent for the resouce endpoint
                             swimClient.command(this.swimUrl, `/sensor/${currNotif.ep}/${currEndpoint.lane}`, 'setLatest', { sensorData: data });
 
-                            console.info(this.swimUrl, `/sensor/${currNotif.ep}/${currEndpoint.lane}`, 'setLatest', { sensorData: data });
+                            this.info(this.swimUrl, `/sensor/${currNotif.ep}/${currEndpoint.lane}`, 'setLatest', { sensorData: data });
 
                         }
                     }
                 }
             } catch (ex) {
                 // there was an error so throw it
-                console.info('notification parse error')
-                console.info(ex);
+                this.info('notification parse error')
+                this.info(ex);
             }
 
 
@@ -379,12 +379,12 @@ class Main {
                 if (currEndpoint) {
                     // update the sensor webagent for the resource endopint with the new data
                     swimClient.command(this.swimUrl, `/sensor/${msg.ep}/${currEndpoint.lane}`, 'setLatest', { sensorData: data });
-                    console.info(this.swimUrl, `/sensor/${msg.ep}/${currEndpoint.lane}`, 'setLatest', { sensorData: data });
+                    this.info(this.swimUrl, `/sensor/${msg.ep}/${currEndpoint.lane}`, 'setLatest', { sensorData: data });
                 } else {
-                    console.info("end point not found in lookup:", msg.ep, msg.path);
+                    this.info("end point not found in lookup:", msg.ep, msg.path);
                 }
             } else {
-                console.info('no receiver', msg);
+                this.info('no receiver', msg);
 
             }
         }
@@ -393,7 +393,7 @@ class Main {
 
     /**
      * Utility method to make a HTTP Request and pass
-     * the proper auth headers for the Connect API
+     * the proper auth headers for the Pelion Connect API
      * 
      * @param {*} path 
      * @param {*} data 
@@ -402,7 +402,7 @@ class Main {
      * @param {*} onError 
      */
     httpRequest(path, data, type, onComplete, onError) {
-        // console.info("httpRequest", path, data, type)
+        // this.info("httpRequest", path, data, type)
 
         // create auth header
         const options = {
@@ -417,10 +417,10 @@ class Main {
 
         // create request object
         const req = https.request(options, res => {
-            // console.info(res);
+            // this.info(res);
             this.httpRes = res;
             res.on('data', d => {
-                // console.info(d);
+                // this.info(d);
                 onComplete(d.toString())
             })
         })
@@ -463,13 +463,19 @@ class Main {
      */
     loadConfig(configName) {
         if (this.showDebug) {
-            console.info('[main] load config');
+            this.info('[main] load config');
         }
         // load config
         this.config = require('../config/' + configName + '.json');
 
         if (this.showDebug) {
-            console.info('[main] config loaded');
+            this.info('[main] config loaded');
+        }
+    }
+
+    info(...args) {
+        if(this.showDebug) {
+            console.info(...args);
         }
     }
 }
