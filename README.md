@@ -9,7 +9,7 @@ Application has three swim WebAgent types:
 
 Sensor data received by NodeJS which roues the data into Swim via command lanes. This could be replaced with a data simulator.
 
-![architechture](/ui/assets/images/dataflow-diagram.jpg)
+![architechture](/ui/assets/images/dataflow-diagram.png)
 
 Web UI showing real time state of a single plant based on the agent structure decribed above.
 
