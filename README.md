@@ -18,6 +18,8 @@ Application has three main WebAgent types. These three types are theAggregationS
 
 A Sensor WebAgent is created by NodeJS during Device Registration and automatically registers itself with its parent Plant Web Agent based on the plantID sent as part of sensor info.
 
+![architecture](/ui/assets/images/dataflow-diagram.png)
+
 Web UI showing real time state of a single plant based on the agent structure described above.
 
 ![screenshot](/ui/assets/images/ui-screenshot.png)
