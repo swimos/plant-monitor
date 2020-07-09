@@ -45,18 +45,7 @@ Starting Swim:
 
 The gradle wrapper will automatically pull down the correct version of Gradle and then build/run the app. Once the app is running you will see "Running Swim Plant Monitor Server..." in the console. Next start up the NodeJS bridge.
 
-Starting Node bridge:
-1. Open a new command prompt
-2. cd to /plant-monitor/node
-3. `npm start`
+You can now navigate to the [Main Page](http://127.0.0.1:9001) of the app in your browser. Next, in another tab, navigate to the [Plant Sim](http://127.0.0.1:9001), select a few value and click Create Plant. Your new sim plant will appear in the list on both pages.
 
-You can now navigate to the [main page](http://127.0.0.1:9001) of the app in your browser.
-
-Pelion Device Simulator
-1. Start docker image with proper API key
-2. Navigate to the [Device Simulator Page](http://127.0.0.1:8002/view/peliondm)
-3. Verify your simulated device registers itself in the device portal.
-
-Once your device is registered, the Connect API will send a registration event to the Node Bridge. That will trigger the bridge to query the API for the device information and then create new plant and sensor web agents for the device and its resources.
 
 

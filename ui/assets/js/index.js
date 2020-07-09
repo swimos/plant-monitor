@@ -148,8 +148,6 @@ class PlantPage {
     this.sensorList = {};
     this.plantAlerts = [];
     this.sensorListSynced = false;
-    this.blinkAsyncId = null;
-    this.patternAsyncId = null;
 
     // lookup selected plant in plant list
     const plant = this.plantList[plantId];
@@ -438,50 +436,6 @@ class PlantPage {
 
       // append current chart to canvas
       chartCanvas.append(this.charts[chartKey]);
-
-    }
-  }
-
-  /**
-   * Send blink LED command to pelion device
-   */
-  blinkLed() {
-    if (this.selectedPlant !== null) {
-      swim.command(this.swimUrl, `/plant/${this.selectedPlant.id}`, 'blinkLed', swim.Value.absent());
-
-    } else {
-      alert("Select a device");
-    }
-  }
-
-  /**
-   * Change the alert threshold value for one or more sensors
-   * 
-   * @param {*} sensorId 
-   */
-  changeThreshold(sensorId) {
-    if (this.selectedPlant !== null) {
-      const newValue = prompt("Enter a new threshold value.\n(0-100)");
-
-      // make sure we have a value
-      if(newValue == "" || newValue == null) {
-        return;
-      }
-
-      // if passed a specific sensor, update that one
-      // otherwise update all sensors
-      if(sensorId) {
-        swim.command(this.swimUrl, `/sensor/${this.selectedPlant.id}/${sensorId}`, 'setThreshold', newValue);
-      } else {
-        if(newValue >= 1 && newValue <= 100) {
-          for (let sensor in this.sensorList) {
-            //this.sensorLinks[`sensor-${sensor}-latest`] = swim.nodeRef(this.swimUrl, `/sensor/${plantId}/${sensor}`).downlinkValue().laneUri('latest')
-            swim.command(this.swimUrl, `/sensor/${this.selectedPlant.id}/${sensor}`, 'setThreshold', newValue);
-          }
-    
-        }
-      }
-
 
     }
   }
