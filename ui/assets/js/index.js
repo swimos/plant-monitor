@@ -245,8 +245,8 @@ class PlantPage {
                 break;
               case "tempAvg":
                 this.tempDial.value(newValue.numberValue(), this.tween);
-                this.tempDial.label(`${newValue.stringValue()}°C`);
-                document.getElementById("tempAvgValue").innerHTML = `${newValue.stringValue()}%`;
+                this.tempDial.label(`${newValue.stringValue()}°F`);
+                document.getElementById("tempAvgValue").innerHTML = `${newValue.stringValue()}°F`;
                 break;
               case "humidity":
                 this.humidityDial.value(newValue.numberValue(), this.tween);
@@ -268,7 +268,7 @@ class PlantPage {
                 document.getElementById("lightThreshold").innerHTML = `${newValue.stringValue()}%`;
                 break;
               case "tempAvg":
-                document.getElementById("tempAvgThreshold").innerHTML = `${newValue.stringValue()}°C`;
+                document.getElementById("tempAvgThreshold").innerHTML = `${newValue.stringValue()}°F`;
                 break;
               case "humidity":
                 document.getElementById("humidityThreshold").innerHTML = `${newValue.stringValue()}%`;
@@ -440,4 +440,35 @@ class PlantPage {
     }
   }
 
+  /**
+   * Change the alert threshold value for one or more sensors
+   * 
+   * @param {*} sensorId 
+   */
+  changeThreshold(sensorId) {
+    if (this.selectedPlant !== null) {
+      const newValue = prompt("Enter a new threshold value.\n(0-100)");
+
+      // make sure we have a value
+      if(newValue == "" || newValue == null) {
+        return;
+      }
+
+      // if passed a specific sensor, update that one
+      // otherwise update all sensors
+      if(sensorId) {
+        swim.command(this.swimUrl, `/sensor/${this.selectedPlant.id}/${sensorId}`, 'setThreshold', newValue);
+      } else {
+        if(newValue >= 1 && newValue <= 100) {
+          for (let sensor in this.sensorList) {
+            //this.sensorLinks[`sensor-${sensor}-latest`] = swim.nodeRef(this.swimUrl, `/sensor/${plantId}/${sensor}`).downlinkValue().laneUri('latest')
+            swim.command(this.swimUrl, `/sensor/${this.selectedPlant.id}/${sensor}`, 'setThreshold', newValue);
+          }
+    
+        }
+      }
+
+
+    }
+  }  
 }

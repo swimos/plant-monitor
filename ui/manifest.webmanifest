@@ -1,0 +1,44 @@
+{
+    "short_name": "Swim Plant Monitor",
+    "name": "Swim Plant Monitor",
+    "description": "Swim Plant Monitor",
+    "icons": [
+      {
+        "src": "/assets/swim-icon-192px.png",
+        "type": "image/png",
+        "sizes": "192x192"
+      },
+      {
+        "src": "/assets/swim-icon-512px.png",
+        "type": "image/png",
+        "sizes": "512x512"
+      }
+    ],
+    "start_url": "/index.html",
+    "background_color": "#1a1a1a",
+    "display": "minimal-ui",
+    "scope": "/",
+    "theme_color": "#1a1a1a",
+    "serviceworker": {
+      "src": "/sw.js",
+      "scope": "/",
+      "type": "",
+      "update_via_cache": "none"
+    },    
+    "shortcuts": [
+      {
+        "name": "How's weather today?",
+        "short_name": "Today",
+        "description": "View weather information for today",
+        "url": "/today?source=pwa",
+        "icons": [{ "src": "/images/today.png", "sizes": "192x192" }]
+      },
+      {
+        "name": "How's weather tomorrow?",
+        "short_name": "Tomorrow",
+        "description": "View weather information for tomorrow",
+        "url": "/tomorrow?source=pwa",
+        "icons": [{ "src": "/images/tomorrow.png", "sizes": "192x192" }]
+      }
+    ]
+  }

@@ -16,7 +16,7 @@ import swim.uri.Uri;
 public class SensorState extends AbstractAgent {
 
   // max number of records to hold in history lane
-  private static final int HISTORY_SIZE = 200;
+  private static final int HISTORY_SIZE = 17280;
 
   // bool used to keep track of if the sensor has registered to its plant
   private boolean isRegistered = false;

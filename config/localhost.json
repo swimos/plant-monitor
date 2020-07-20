@@ -6,10 +6,32 @@
     "swimAddress": "127.0.0.1",
     "swimPort": "9001",
     "showDebug": true,
-    "mainLoopInterval": 2000,
+    "mainLoopInterval": 5000,
     "arduino": {
         "enabled": true,
         "address": "/dev/ttyS3",
         "baud": 115200
-    }
+    },
+    "sensors": [
+        {
+            "name": "Light Level",
+            "lane": "light",
+            "enabled": true
+        },
+        {
+            "name": "Soil Water Level",
+            "lane": "soil",
+            "enabled": true
+        },
+        {
+            "name": "Average Temperature",
+            "lane": "tempAvg",
+            "enabled": true
+        },
+        {
+            "name": "Humidity",
+            "lane": "humidity",
+            "enabled": true
+        }
+    ]    
 }

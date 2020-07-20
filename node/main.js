@@ -5,7 +5,7 @@ const ArduinoBoard = require('./modules/ArduinoBoard');
 // include SWIM client
 const swimClient = require('@swim/client');
 
-// grab command line argumenets
+// grab command line arguments
 const commandLineArgs = process.argv
 
 class Main {
@@ -46,14 +46,32 @@ class Main {
             this.arduino.board.setDataHandler(this.onSerialData.bind(this));
         }
 
-        // reigster new plant with Swim Server
+        for (const index in this.config.sensors) {
+            const sensor = this.config.sensors[index]; // current endpoint config data
+
+            // if current endpoint is enabled
+            if (sensor.enabled) {
+                // define sensor info for current resource endpoint
+                const msg = {
+                    plantId: this.plantInfo.id,
+                    sensorName: sensor.name,
+                    sensorId: sensor.lane,
+                }
+
+                // create new sensor webagent 
+                swimClient.command(this.swimUrl, `/sensor/${this.plantInfo.id}/${sensor.lane}`, 'setInfo', msg);
+
+            }
+        }        
+
+        // register new plant with Swim Server
         swimClient.command(this.swimUrl, `/plant/${this.plantInfo.id}`, 'createPlant', this.plantInfo);
 
         // kick off app loop
         this.mainLoop();
     }
 
-    // handle data sent from arduinio or other serial device. Should be receiving JSON formatted messages.
+    // handle data sent from arduino or other serial device. Should be receiving JSON formatted messages.
     onSerialData(newData) {
         try {
             this.sensorData = JSON.parse(newData);
