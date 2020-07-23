@@ -3,9 +3,9 @@
         "id": "desktop1",
         "name": "Desktop Plant"
     },
-    "swimAddress": "127.0.0.1",
-    "swimPort": "9001",
-    "swimProtocol": "ws",
+    "swimAddress": "scott.farm",
+    "swimPort": "443",
+    "swimProtocol": "wss",
     "showDebug": true,
     "mainLoopInterval": 5000,
     "arduino": {

@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 ExecStart=/home/sclarke27/plant-monitor/java/dist/swim-plantmonitor-0.1/bin/swim-plantmonitor
-WorkingDirectory=/home/sclarek27/java/
+WorkingDirectory=/home/sclarke27/plant-monitor/java/
 StandardOutput=inherit
 StandardError=inherit
 Restart=always
