@@ -3,12 +3,12 @@ Description=Swim Plant Monitor Server
 After=network.target
 
 [Service]
-ExecStart=/home/pi/plant-monitor/java/dist/swim-plantmonitor-0.1/bin/swim-plantmonitor
-WorkingDirectory=/home/pi/plant-monitor/java/
+ExecStart=/home/sclarke27/plant-monitor/java/dist/swim-plantmonitor-0.1/bin/swim-plantmonitor
+WorkingDirectory=/home/sclarek27/java/
 StandardOutput=inherit
 StandardError=inherit
 Restart=always
-User=pi
+User=ubuntu
 
 [Install]
 WantedBy=multi-user.target

@@ -28,7 +28,8 @@
 		window.page = null;
 
 		function start() {
-			window.page = new Sim(`warp://${window.location.host}`);
+			const swimUrl = `${(window.location.protocol === "https:"? "wss" : "ws")}://${window.location.host}`;
+			window.page = new Sim(swimUrl);
 			window.page.initialize();
 		}
 	</script>

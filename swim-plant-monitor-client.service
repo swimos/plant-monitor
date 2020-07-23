@@ -3,12 +3,12 @@ Description=Swim Plant Monitor Client
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/node /home/pi/plant-monitor/node/main.js
-WorkingDirectory=/home/pi/plant-monitor/node/
+ExecStart=/usr/bin/node /home/sclarke27/plant-monitor/node/main.js
+WorkingDirectory=/home/sclarke27/plant-monitor/node/
 StandardOutput=inherit
 StandardError=inherit
 Restart=always
-User=pi
+User=ubuntu
 
 [Install]
 WantedBy=multi-user.target

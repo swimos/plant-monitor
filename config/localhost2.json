@@ -1,7 +1,7 @@
 {
     "plantInfo": {
-        "id": "desktop1",
-        "name": "Desktop Plant"
+        "id": "palm1",
+        "name": "Small Palm Plant"
     },
     "swimAddress": "127.0.0.1",
     "swimPort": "9001",
@@ -10,7 +10,7 @@
     "mainLoopInterval": 5000,
     "arduino": {
         "enabled": true,
-        "address": "/dev/ttyS3",
+        "address": "/dev/ttyS4",
         "baud": 115200
     },
     "sensors": [

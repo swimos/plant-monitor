@@ -17,7 +17,7 @@ class Main {
 
         this.swimPort = this.config.swimPort;
         this.swimAddress = this.config.swimAddress;
-        this.swimUrl = 'ws://' + this.swimAddress + ':' + this.swimPort;
+        this.swimUrl = `${this.config.swimProtocol}://${this.config.swimAddress}:${this.config.swimPort}`;
 
         this.showDebug = this.config.showDebug;
         this.deviceId = this.config.deviceId;

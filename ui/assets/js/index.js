@@ -244,9 +244,10 @@ class PlantPage {
                 document.getElementById("lightValue").innerHTML = `${labelValue2}%`;
                 break;
               case "tempAvg":
-                this.tempDial.value(newValue.numberValue(), this.tween);
-                this.tempDial.label(`${newValue.stringValue()}°F`);
-                document.getElementById("tempAvgValue").innerHTML = `${newValue.stringValue()}°F`;
+                const tempF = ((newValue.numberValue() * 9.0 / 5.0) + 32.0).toPrecision(4);
+                this.tempDial.value(tempF, this.tween);
+                this.tempDial.label(`${tempF}°F`);
+                document.getElementById("tempAvgValue").innerHTML = `${tempF}°F`;
                 break;
               case "humidity":
                 this.humidityDial.value(newValue.numberValue(), this.tween);
