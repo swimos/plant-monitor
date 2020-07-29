@@ -39,7 +39,7 @@ public class ApplicationPlane extends AbstractPlane {
     // Startup our Swim Kernal
     kernel.start();
     kernel.run();
-    System.out.println("Running Swim Plant Montior Server...");
+    System.out.println("Running Swim Plant Monitor Server...");
 
     // Send the app config to aggregation web agent.
     space.command(Uri.parse("/aggregation"), Uri.parse("setConfig"), ConfigEnv.config);
