@@ -13,18 +13,12 @@ import swim.structure.Value;
 import swim.uri.Uri;
 import swim.uri.UriPath;
 
-import swim.plantmonitor.configUtil.ConfigEnv;
-
-
 /**
   The PlantState Web Agent represents a single 
   simulated plant and each plant has a collection 
   of sensors attached to it.
  */
 public class PlantState extends AbstractAgent {
-
-  // application config data. Populated by SetConfig command lane.
-  private Value config;
 
   private Boolean showDebug = false;
 
@@ -47,16 +41,6 @@ public class PlantState extends AbstractAgent {
    */
   @SwimLane("alertList")
   MapLane<String, Value> alertList = this.<String, Value>mapLane();
-
-  /**
-    Command Lane used to receive application config data from 
-    Aggregation Web Agent after Plant Agent is created
-   */
-  @SwimLane("setConfig")
-  CommandLane<Value> setConfigCommand = this.<Value>commandLane()
-    .onCommand(configData -> {
-      this.config = configData;
-    });
 
   /**
     Command Lane used to create a Plant Web Agent

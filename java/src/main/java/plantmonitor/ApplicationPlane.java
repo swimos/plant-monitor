@@ -9,8 +9,6 @@ import swim.server.ServerLoader;
 import swim.structure.Value;
 import swim.uri.Uri;
 
-import swim.plantmonitor.configUtil.ConfigEnv;
-
 /**
   The ApplicationPlane is the top level of the app.
   This Swim Plane defines the routes to each WebAgent
@@ -28,9 +26,6 @@ public class ApplicationPlane extends AbstractPlane {
    */
   public static void main(String[] args) throws InterruptedException {
 
-    // Load up data in config file
-    ConfigEnv.loadConfig();
-
     // Create the Swim Kernel and Swim Space for our applications
     // The Space and its Web Agents are defined configured in /resource/server.recon
     final Kernel kernel = ServerLoader.loadServer();
@@ -40,9 +35,6 @@ public class ApplicationPlane extends AbstractPlane {
     kernel.start();
     kernel.run();
     System.out.println("Running Swim Plant Monitor Server...");
-
-    // Send the app config to aggregation web agent.
-    space.command(Uri.parse("/aggregation"), Uri.parse("setConfig"), ConfigEnv.config);
         
   }
 }

@@ -27,9 +27,6 @@ import swim.plantmonitor.configUtil.ConfigEnv;
  */
 public class AggregationService extends AbstractAgent {
 
-  // application config data
-  private Value config;
-
   /**
     Map Lane to hold list of plants that are being tracked
    */
@@ -45,16 +42,6 @@ public class AggregationService extends AbstractAgent {
   MapLane<String, Value> plantAlerts = this.<String, Value>mapLane();
 
   /**
-    Command land used to update application config data
-    Called on start up by Application Plane
-   */
-  @SwimLane("setConfig")
-  CommandLane<Value> setConfigCommand = this.<Value>commandLane()
-    .onCommand(configData -> {
-      this.config = configData;
-    });
-
-  /**
     Command Lane to add a new plant to the plant list
     Called by a plant web agent when its created
    */
@@ -63,8 +50,8 @@ public class AggregationService extends AbstractAgent {
     String plantId = plantData.get("id").stringValue("none");
     if (plantId != "none") {
       plantList.put(plantId, plantData);
-      String plantNode = String.format("/plant/%1$s", plantId);
-      command(Uri.parse(plantNode), Uri.parse("setConfig"), ConfigEnv.config);
+      // String plantNode = String.format("/plant/%1$s", plantId);
+      // command(Uri.parse(plantNode), Uri.parse("setConfig"), ConfigEnv.config);
     }  
   });
 
