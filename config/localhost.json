@@ -7,7 +7,7 @@
     "swimPort": "9001",
     "showDebug": false,
     "mainLoopInterval": 5000,
-    "authToken": "ak_1MDE3MjI5MWVlZWVhN2ExZTNkYzEyYWU3MDAwMDAwMDA01722982f11bceef6448061800000000hHrp7q2Ow4TeYe9x5SkkOCJ28GBIRThK",
+    "authToken": "<API_KEY>",
     "apiUrl": "api.us-east-1.mbedcloud.com",
     "endpoints": [
         {
@@ -51,7 +51,7 @@
             "lane": "humidity",
             "enabled": true,
             "subscription": {
-                "uri": "/3203/0/5514", 
+                "uri": "/3203/0/5513", 
                 "obs": true                
             }             
         }

@@ -1,116 +1,165 @@
+// ----------------------------------------------------------------------------
+// Copyright 2016-2020 ARM Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// ----------------------------------------------------------------------------
+
+// Needed for PRIu64 on FreeRTOS
+#include <stdio.h>
+// Note: this macro is needed on armcc to get the the limit macros like UINT16_MAX
+#ifndef __STDC_LIMIT_MACROS
+#define __STDC_LIMIT_MACROS
+#endif
+
+// Note: this macro is needed on armcc to get the the PRI*32 macros
+// from inttypes.h in a C++ code.
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS
+#endif
+#if defined (__RTX)
+#include "pdmc_main.h"
+#endif
+#include "simplem2mclient.h"
+#ifdef TARGET_LIKE_MBED
 #include "mbed.h"
-#include "mbed_events.h"
-#include "mbed_trace.h"
-#include "simple-mbed-cloud-client.h"
-#include "SimulatorBlockDevice.h"
-#include "eventOS_scheduler.h"
-#include "mbed.h"
-#include "C12832.h"
-#include "Sht31.h"
+#endif
+#include "application_init.h"
+#include "mcc_common_button_and_led.h"
+#include "blinky.h"
+#ifndef MBED_CONF_MBED_CLOUD_CLIENT_DISABLE_CERTIFICATE_ENROLLMENT
+#include "certificate_enrollment_user_cb.h"
+#endif
 
-C12832 lcd(SPI_MOSI, SPI_SCK, SPI_MISO, p8, p11);
-Sht31 sht31(I2C_SDA, I2C_SCL);
-DigitalOut led(LED1);
-AnalogOut lightSensor(p15);
-AnalogOut soilSensor(p16);
-AnalogOut pressureSensor(p17);
+#if defined(MBED_CONF_NANOSTACK_HAL_EVENT_LOOP_USE_MBED_EVENTS) && \
+ (MBED_CONF_NANOSTACK_HAL_EVENT_LOOP_USE_MBED_EVENTS == 1) && \
+ defined(MBED_CONF_EVENTS_SHARED_DISPATCH_FROM_APPLICATION) && \
+ (MBED_CONF_EVENTS_SHARED_DISPATCH_FROM_APPLICATION == 1)
+#include "nanostack-event-loop/eventOS_scheduler.h"
+#endif
 
-SimulatorBlockDevice bd("myblockdevice", 128 * 512, 512);
+// event based LED blinker, controlled via pattern_resource
+#ifndef MCC_MEMORY
+static Blinky blinky;
+#endif
 
-// Declaring pointers for access to Pelion Device Management Client resources outside of main()
-MbedCloudClientResource *button_res;
-MbedCloudClientResource *pattern_res;
+static void main_application(void);
 
-MbedCloudClientResource *light_res;
-MbedCloudClientResource *soil_res;
-MbedCloudClientResource *temp_res;
-MbedCloudClientResource *humidity_res;
-MbedCloudClientResource *pressure_res;
+#if defined(MBED_CLOUD_APPLICATION_NONSTANDARD_ENTRYPOINT)
+extern "C"
+int mbed_cloud_application_entrypoint(void)
+#else
+int main(void)
+#endif //MBED_CLOUD_APPLICATION_NONSTANDARD_ENTRYPOINT
+{
+    return mcc_platform_run_program(main_application);
+}
 
-// This function gets triggered by the timer. It's easy to replace it by an InterruptIn and fall() mode on a real button
-void fake_button_press() {
-    int v = button_res->get_value_int() + 1;
+// Pointers to the resources that will be created in main_application().
+static M2MResource* button_res;
+static M2MResource* pattern_res;
+static M2MResource* blink_res;
+static M2MResource* unregister_res;
+static M2MResource* factory_reset_res;
 
-    button_res->set_value(v);
+static M2MResource* light_res;
+static M2MResource* soil_res;
+static M2MResource* temp_res;
+static M2MResource* humidity_res;
+static M2MResource* pressure_res;
 
-    printf("Simulated button clicked %d times\n", v);
+void unregister(void);
+
+// Pointer to mbedClient, used for calling close function.
+static SimpleM2MClient *client;
+
+void counter_updated(const char*)
+{
+    // Converts uint64_t to a string to remove the dependency for int64 printf implementation.
+    char buffer[20+1];
+    (void) m2m::itoa_c(button_res->get_value_int(), buffer);
+    printf("Counter resource set to %s\r\n", buffer);
+}
+
+void pattern_updated(const char *)
+{
+    printf("PUT received, new value: %s\r\n", pattern_res->get_value_string().c_str());
+}
+
+void blink_callback(void *)
+{
+    String pattern_string = pattern_res->get_value_string();
+    printf("POST executed\r\n");
+
+    // The pattern is something like 500:200:500, so parse that.
+    // LED blinking is done while parsing.
+#ifndef MCC_MEMORY
+    const bool restart_pattern = false;
+    if (blinky.start((char*)pattern_res->value(), pattern_res->value_length(), restart_pattern) == false) {
+        printf("out of memory error\r\n");
+    }
+#endif
+    blink_res->send_delayed_post_response();
 }
 
 void light_change() {
-    float light = lightSensor.read();
-
-    if(light != 0.0f) {
-
-        light_res->set_value(light*100);
-        printf("light read as: %.1f \n", light*100);
-
+    int newDiff = rand() % 5 + 1;
+    int v = 0;
+    if((rand() % 2) == 1) {
+            v = light_res->get_value_int() + newDiff;
     } else {
-        int newDiff = rand() % 5 + 1;
-        int v = 0;
-        if((rand() % 2) == 1) {
-                v = light_res->get_value_int() + newDiff;
-        } else {
-                v = light_res->get_value_int() - newDiff;
-        }
-        if(v > 100 || v < 0) {
-            v = 50;
-        }
-        light_res->set_value(v);
-        // printf("light change to: %d \n", v);
-
+            v = light_res->get_value_int() - newDiff;
     }
+    if(v > 100 || v < 0) {
+        v = 50;
+    }
+    light_res->set_value(v);
+    printf("light change to: %d \n", v);
 }
 
 void soil_change() {
-    float soil = soilSensor.read();
-
-    if(soil != 0.0f) {
-        soil_res->set_value(soil*100);
-        printf("soil read as: %.1f \n", soil*100);
-
+    int newDiff = rand() % 5 + 1;
+    int v = 0;
+    if((rand() % 2) == 1) {
+            v = soil_res->get_value_int() + newDiff;
     } else {
-        int newDiff = rand() % 5 + 1;
-        int v = 0;
-        if((rand() % 2) == 1) {
-                v = soil_res->get_value_int() + newDiff;
-        } else {
-                v = soil_res->get_value_int() - newDiff;
-        }
-        if(v > 100 || v < 0) {
-            v = 50;
-        }
-
-        soil_res->set_value(v);
-        printf("soil change to: %d \n", v);
-
+            v = soil_res->get_value_int() - newDiff;
+    }
+    if(v > 100 || v < 0) {
+        v = 50;
     }
 
+    soil_res->set_value(v);
+    printf("soil change to: %d \n", v);
 }
+
 void temp_change() {
-    float temp = sht31.readTemperature();
-
-    if(temp != 0.0f) {
-        temp_res->set_value(temp);
-        printf("temp sensor read: %.1f \n", temp);
+    int newDiff = rand() % 5 + 1;
+    int v = 0;
+    if((rand() % 2) == 1) {
+            v = temp_res->get_value_int() + newDiff;
     } else {
-        int newDiff = rand() % 5 + 1;
-        int v = 0;
-        if((rand() % 2) == 1) {
-                v = temp_res->get_value_int() + newDiff;
-        } else {
-                v = temp_res->get_value_int() - newDiff;
-        }
-        if(v > 100 || v < 0) {
-            v = 50;
-        }
-
-        temp_res->set_value(v);
-        printf("temp change to: %d \n", v);
-
+            v = temp_res->get_value_int() - newDiff;
+    }
+    if(v > 100 || v < 0) {
+        v = 50;
     }
 
-
+    temp_res->set_value(v);
+    printf("temp change to: %d \n", v);
 }
+
 void humidity_change() {
     int newDiff = rand() % 5 + 1;
     int v = 0;
@@ -119,16 +168,15 @@ void humidity_change() {
     } else {
             v = humidity_res->get_value_int() - newDiff;
     }
+
     if(v > 100 || v < 0) {
         v = 50;
     }
 
     humidity_res->set_value(v);
     printf("humidity change to: %d \n", v);
-
-    float humidity = sht31.readHumidity() * 100;
-    printf("humidity sensor read: %.1f \n", humidity);
 }
+
 void pressure_change() {
     int newDiff = rand() % 5 + 1;
     int v = 0;
@@ -146,187 +194,268 @@ void pressure_change() {
 }
 
 void refresh_sensors() {
-    fake_button_press();
     light_change();
     soil_change();
     temp_change();
     humidity_change();
     pressure_change();
-
-    // lcd.cls();
-
-    // float temp = sht31.readTemperature();
-    // float humidity = sht31.readHumidity();
-
-    // lcd.locate(3, 3);
-    // lcd.printf("Temperature: %.2f C", temp);
-    // lcd.locate(3, 13);
-    // lcd.printf("Humidity: %.2f %%", humidity);
 }
 
-/**
- * PUT handler
- * @param resource The resource that triggered the callback
- * @param newValue Updated value for the resource
- */
-void pattern_updated(MbedCloudClientResource *resource, m2m::String newValue) {
-    printf("PUT received, new value: %s\n", newValue.c_str());
-}
-
-void blink() {
-    static DigitalOut augmentedLed(LED1); // LED that is used for blinking the pattern
-    augmentedLed = !augmentedLed;
-}
-
-/**
- * POST handler
- * @param resource The resource that triggered the callback
- * @param buffer If a body was passed to the POST function, this contains the data.
- *               Note that the buffer is deallocated after leaving this function, so copy it if you need it longer.
- * @param size Size of the body
- */
-void blink_callback(MbedCloudClientResource *resource, const uint8_t *buffer, uint16_t size) {
-    printf("POST received. Going to blink LED pattern: %s\n", pattern_res->get_value().c_str());
-
-    // Parse the pattern string, and toggle the LED in that pattern
-    string s = std::string(pattern_res->get_value().c_str());
-    size_t i = 0;
-    size_t pos = s.find(':');
-    int total_len = 0;
-    while (pos != string::npos) {
-        int len = atoi(s.substr(i, pos - i).c_str());
-
-        mbed_event_queue()->call_in(total_len + len, &blink);
-
-        total_len += len;
-        i = ++pos;
-        pos = s.find(':', pos);
+void notification_status_callback(const M2MBase& object,
+                            const M2MBase::MessageDeliveryStatus status,
+                            const M2MBase::MessageType /*type*/)
+{
+    switch(status) {
+        case M2MBase::MESSAGE_STATUS_BUILD_ERROR:
+            printf("Message status callback: (%s) error when building CoAP message\r\n", object.uri_path());
+            break;
+        case M2MBase::MESSAGE_STATUS_RESEND_QUEUE_FULL:
+            printf("Message status callback: (%s) CoAP resend queue full\r\n", object.uri_path());
+            break;
+        case M2MBase::MESSAGE_STATUS_SENT:
+            printf("Message status callback: (%s) Message sent to server\r\n", object.uri_path());
+            break;
+        case M2MBase::MESSAGE_STATUS_DELIVERED:
+            printf("Message status callback: (%s) Message delivered\r\n", object.uri_path());
+            break;
+        case M2MBase::MESSAGE_STATUS_SEND_FAILED:
+            printf("Message status callback: (%s) Message sending failed\r\n", object.uri_path());
+            break;
+        case M2MBase::MESSAGE_STATUS_SUBSCRIBED:
+            printf("Message status callback: (%s) subscribed\r\n", object.uri_path());
+            break;
+        case M2MBase::MESSAGE_STATUS_UNSUBSCRIBED:
+            printf("Message status callback: (%s) subscription removed\r\n", object.uri_path());
+            break;
+        case M2MBase::MESSAGE_STATUS_REJECTED:
+            printf("Message status callback: (%s) server has rejected the message\r\n", object.uri_path());
+            break;
+        default:
+            break;
     }
 }
 
-/**
- * Notification callback handler
- * @param resource The resource that triggered the callback
- * @param status The delivery status of the notification
- */
-void button_callback(MbedCloudClientResource *resource, const NoticationDeliveryStatus status) {
-    printf("Button notification, status %s (%d)\n", MbedCloudClientResource::delivery_status_to_string(status), status);
+void sent_callback(const M2MBase& base,
+                   const M2MBase::MessageDeliveryStatus status,
+                   const M2MBase::MessageType /*type*/)
+{
+    switch(status) {
+        case M2MBase::MESSAGE_STATUS_DELIVERED:
+            unregister();
+            break;
+        default:
+            break;
+    }
 }
 
-void light_callback(MbedCloudClientResource *resource, const NoticationDeliveryStatus status) {
-    sensor_callback("Light", resource, status);
+void unregister_triggered(void)
+{
+    printf("Unregister resource triggered\r\n");
+    unregister_res->send_delayed_post_response();
 }
 
-void soil_callback(MbedCloudClientResource *resource, const NoticationDeliveryStatus status) {
-    sensor_callback("Soil", resource, status);
+void factory_reset_triggered(void*)
+{
+    printf("Factory reset resource triggered\r\n");
+
+    // First send response, so server won't be left waiting.
+    // Factory reset resource is by default expecting explicit
+    // delayed response sending.
+    factory_reset_res->send_delayed_post_response();
+
+    // Then run potentially long-taking factory reset routines.
+    kcm_factory_reset();
 }
 
-void temp_callback(MbedCloudClientResource *resource, const NoticationDeliveryStatus status) {
-    sensor_callback("Temp", resource, status);
+// This function is called when a POST request is received for resource 5000/0/1.
+void unregister(void)
+{
+    printf("Unregister resource executed\r\n");
+    client->close();
 }
 
-void pressure_callback(MbedCloudClientResource *resource, const NoticationDeliveryStatus status) {
-    sensor_callback("Pressure", resource, status);
-}
+void main_application(void)
+{
+#if defined(__linux__) && (MBED_CONF_MBED_TRACE_ENABLE == 0)
+        // make sure the line buffering is on as non-trace builds do
+        // not produce enough output to fill the buffer
+        setlinebuf(stdout);
+#endif
 
-void humidity_callback(MbedCloudClientResource *resource, const NoticationDeliveryStatus status) {
-    sensor_callback("Humidity", resource, status);
-}
-
-void sensor_callback(String sensorName, MbedCloudClientResource *resource, const NoticationDeliveryStatus status) {
-    printf("%s notification, status %s (%d)\n",sensorName,  MbedCloudClientResource::delivery_status_to_string(status), status);
-}
-
-
-/**
- * Registration callback handler
- * @param endpoint Information about the registered endpoint such as the name (so you can find it back in portal)
- */
-void registered(const ConnectorClientEndpointInfo *endpoint) {
-    printf("Connected to Pelion Device Management. Endpoint Name: %s\n", endpoint->internal_endpoint_name.c_str());
-}
-
-int main() {
-    NetworkInterface *net = NetworkInterface::get_default_instance();
-    nsapi_error_t status = net->connect();
-
-    if (status != NSAPI_ERROR_OK) {
-        printf("Connecting to the network failed %d!\n", status);
-        return -1;
+    // Initialize trace-library first
+    if (application_init_mbed_trace() != 0) {
+        printf("Failed initializing mbed trace\r\n" );
+        return;
     }
 
-    // mbed_trace_init();
-
-    printf("Connected to the network successfully. IP address: %s\n", net->get_ip_address());
-
-    // SimpleMbedCloudClient handles registering over LwM2M to Mbed Cloud
-    SimpleMbedCloudClient client(net, &bd);
-    int client_status = client.init();
-    if (client_status != 0) {
-        printf("Pelion Client initialization failed (%d)\n", client_status);
-        return -1;
+    // Initialize storage
+    if (mcc_platform_storage_init() != 0) {
+        printf("Failed to initialize storage\r\n" );
+        return;
     }
 
-    printf("Pelion Client initialized\n");
+    // Initialize platform-specific components
+    if(mcc_platform_init() != 0) {
+        printf("ERROR - platform_init() failed!\r\n");
+        return;
+    }
 
-    // Creating resources, which can be written or read from the cloud
-    button_res = client.create_resource("3200/0/5501", "button_count");
+    // Print some statistics of the object sizes and their heap memory consumption.
+    // NOTE: This *must* be done before creating MbedCloudClient, as the statistic calculation
+    // creates and deletes M2MSecurity and M2MDevice singleton objects, which are also used by
+    // the MbedCloudClient.
+#ifdef MBED_HEAP_STATS_ENABLED
+    print_m2mobject_stats();
+#endif
+
+    // SimpleClient is used for registering and unregistering resources to a server.
+    SimpleM2MClient mbedClient;
+
+    // Save pointer to mbedClient so that other functions can access it.
+    client = &mbedClient;
+
+    /*
+     * Pre-initialize network stack and client library.
+     *
+     * Specifically for nanostack mesh networks on Mbed OS platform it is important to initialize
+     * the components in correct order to avoid out-of-memory issues in Device Management Client initialization.
+     * The order for these use cases should be:
+     * 1. Initialize network stack using `nsapi_create_stack()` (Mbed OS only). // Implemented in `mcc_platform_interface_init()`.
+     * 2. Initialize Device Management Client using `init()`.                   // Implemented in `mbedClient.init()`.
+     * 3. Connect to network interface using 'connect()`.                       // Implemented in `mcc_platform_interface_connect()`.
+     * 4. Connect Device Management Client to service using `setup()`.          // Implemented in `mbedClient.register_and_connect)`.
+     */
+    (void) mcc_platform_interface_init();
+    mbedClient.init();
+
+    // application_init() runs the following initializations:
+    //  1. platform initialization
+    //  2. print memory statistics if MBED_HEAP_STATS_ENABLED is defined
+    //  3. FCC initialization.
+    if (!application_init()) {
+        printf("Initialization failed, exiting application!\r\n");
+        return;
+    }
+
+    // Print platform information
+    mcc_platform_sw_build_info();
+
+    // Initialize network
+    if (!mcc_platform_interface_connect()) {
+        printf("Network initialized, registering...\r\n");
+    } else {
+        return;
+    }
+
+#ifdef MBED_HEAP_STATS_ENABLED
+    printf("Client initialized\r\n");
+    print_heap_stats();
+#endif
+#ifdef MBED_STACK_STATS_ENABLED
+    print_stack_statistics();
+#endif
+
+#ifndef MCC_MEMORY
+    // Create resource for button count. Path of this resource will be: 3200/0/5501.
+    button_res = mbedClient.add_cloud_resource(3200, 0, 5501, "button_resource", M2MResourceInstance::INTEGER,
+                              M2MBase::GET_PUT_ALLOWED, 0, true, (void*)counter_updated, (void*)notification_status_callback);
     button_res->set_value(0);
-    button_res->methods(M2MMethod::GET);
-    button_res->observable(true);
-    button_res->attach_notification_callback(button_callback);
 
-    pattern_res = client.create_resource("3201/0/5853", "blink_pattern");
-    pattern_res->set_value("500:500:500:500:500:500:500:500");
-    pattern_res->methods(M2MMethod::GET | M2MMethod::PUT);
-    pattern_res->attach_put_callback(pattern_updated);
+    // Create resource for led blinking pattern. Path of this resource will be: 3201/0/5853.
+    pattern_res = mbedClient.add_cloud_resource(3201, 0, 5853, "pattern_resource", M2MResourceInstance::STRING,
+                               M2MBase::GET_PUT_ALLOWED, "500:500:500:500", true, (void*)pattern_updated, (void*)notification_status_callback);
 
-    MbedCloudClientResource *blink_res = client.create_resource("3201/0/5850", "blink_action");
-    blink_res->methods(M2MMethod::POST);
-    blink_res->attach_post_callback(mbed_event_queue()->event(blink_callback));
+    // Create resource for starting the led blinking. Path of this resource will be: 3201/0/5850.
+    blink_res = mbedClient.add_cloud_resource(3201, 0, 5850, "blink_resource", M2MResourceInstance::STRING,
+                             M2MBase::POST_ALLOWED, "", false, (void*)blink_callback, (void*)notification_status_callback);
+    // Use delayed response
+    blink_res->set_delayed_response(true);
 
-    light_res = client.create_resource("/3203/0/5510", "light_level");
-    light_res->set_value(50);
-    light_res->methods(M2MMethod::GET);
-    light_res->observable(true);
-    light_res->attach_notification_callback(light_callback);
+    // Create resource for unregistering the device. Path of this resource will be: 5000/0/1.
+    unregister_res = mbedClient.add_cloud_resource(5000, 0, 1, "unregister", M2MResourceInstance::STRING,
+                 M2MBase::POST_ALLOWED, NULL, false, (void*)unregister_triggered, (void*)sent_callback);
+    unregister_res->set_delayed_response(true);
+
+    light_res = mbedClient.add_cloud_resource(3203, 0, 5510, "light_level", M2MResourceInstance::FLOAT,
+                              M2MBase::GET_ALLOWED, "50", true, nullptr, (void*)notification_status_callback);
+
+    soil_res = mbedClient.add_cloud_resource(3203, 0, 5511, "soil_level", M2MResourceInstance::FLOAT,
+                              M2MBase::GET_ALLOWED, "50", true, nullptr, (void*)notification_status_callback);
+    temp_res = mbedClient.add_cloud_resource(3203, 0, 5512, "temp_level", M2MResourceInstance::FLOAT,
+                              M2MBase::GET_ALLOWED, "50", true, nullptr, (void*)notification_status_callback);
+    humidity_res = mbedClient.add_cloud_resource(3203, 0, 5513, "humidity_level", M2MResourceInstance::FLOAT,
+                              M2MBase::GET_ALLOWED, "1000", true, nullptr, (void*)notification_status_callback);
+    pressure_res = mbedClient.add_cloud_resource(3203, 0, 5514, "pressure_level", M2MResourceInstance::FLOAT,
+                              M2MBase::GET_ALLOWED, "1000", true, nullptr, (void*)notification_status_callback);
+
+    // Create optional Device resource for running factory reset for the device. Path of this resource will be: 3/0/5.
+    factory_reset_res = M2MInterfaceFactory::create_device()->create_resource(M2MDevice::FactoryReset);
+    if (factory_reset_res) {
+        factory_reset_res->set_execute_function(factory_reset_triggered);
+    }
+
+    
+
+#ifdef MBED_CLOUD_CLIENT_TRANSPORT_MODE_UDP_QUEUE
+    button_res->set_auto_observable(true);
+    pattern_res->set_auto_observable(true);
+    blink_res->set_auto_observable(true);
+    unregister_res->set_auto_observable(true);
+    factory_reset_res->set_auto_observable(true);    
+    light_res->set_auto_observable(true);
+    soil_res->set_auto_observable(true);
+    temp_res->set_auto_observable(true);
+    humidity_res->set_auto_observable(true);
+    pressure_res->set_auto_observable(true);
+#endif
+
+#endif
+
+// For high-latency networks with limited total bandwidth combined with large number
+// of endpoints, it helps to stabilize the network when Device Management Client has
+// delayed registration to Device Management after the network formation.
+// This is applicable in large Wi-SUN networks.
+#if defined(STARTUP_MAX_RANDOM_DELAY) && (STARTUP_MAX_RANDOM_DELAY > 0)
+    wait_application_startup_delay();
+#endif
+
+    mbedClient.register_and_connect();
+
+#ifndef MCC_MEMORY
+    blinky.init(mbedClient, button_res);
+    blinky.request_next_loop_event();
+    blinky.request_automatic_increment_event();
+
+    EventQueue *queue = mbed::mbed_event_queue();
+    queue->call_every(5000, &refresh_sensors);
+    queue->dispatch_forever();
+#endif
 
 
-    soil_res = client.create_resource("/3203/0/5511", "soil_level");
-    soil_res->set_value(50);
-    soil_res->methods(M2MMethod::GET);
-    soil_res->observable(true);
-    soil_res->attach_notification_callback(soil_callback);
+#ifndef MBED_CONF_MBED_CLOUD_CLIENT_DISABLE_CERTIFICATE_ENROLLMENT
+    // Add certificate renewal callback
+    mbedClient.get_cloud_client().on_certificate_renewal(certificate_renewal_cb);
+#endif // MBED_CONF_MBED_CLOUD_CLIENT_DISABLE_CERTIFICATE_ENROLLMENT
 
-    temp_res = client.create_resource("/3203/0/5512", "temp_level");
-    temp_res->set_value(50);
-    temp_res->methods(M2MMethod::GET);
-    temp_res->observable(true);
-    temp_res->attach_notification_callback(temp_callback);
+#if defined(MBED_CONF_NANOSTACK_HAL_EVENT_LOOP_USE_MBED_EVENTS) && \
+ (MBED_CONF_NANOSTACK_HAL_EVENT_LOOP_USE_MBED_EVENTS == 1) && \
+ defined(MBED_CONF_EVENTS_SHARED_DISPATCH_FROM_APPLICATION) && \
+ (MBED_CONF_EVENTS_SHARED_DISPATCH_FROM_APPLICATION == 1)
+    printf("Starting mbed eventloop...\r\n");
 
-    pressure_res = client.create_resource("/3203/0/5513", "pressure_level");
-    pressure_res->set_value(1000);
-    pressure_res->methods(M2MMethod::GET);
-    pressure_res->observable(true);
+    eventOS_scheduler_mutex_wait();
 
-    humidity_res = client.create_resource("/3203/0/5514", "humidity_level");
-    humidity_res->set_value(1000);
-    humidity_res->methods(M2MMethod::GET);
-    humidity_res->observable(true);
+    EventQueue *queue = mbed::mbed_event_queue();
+    queue->call_every(5000, &refresh_sensors);
+    queue->dispatch_forever();
+#else
 
-    // Callback that fires when registering is complete
-    client.on_registered(&registered);
+    // Check if client is registering or registered, if true sleep and repeat.
+    while (mbedClient.is_register_called()) {
+        mcc_platform_do_wait(100);
+    }
 
-    // Register with Pelion Device Management
-    int b = client.register_and_connect();
-
-    // The timer fires on an interrupt context, but debounces it to the eventqueue, so it's safe to do network operations
-    Ticker timer;
-    timer.attach(mbed_event_queue()->event(&refresh_sensors), 5.0);
-
-    mbed_event_queue()->call_every(1, &eventOS_scheduler_run_until_idle);
-
-    mbed_event_queue()->dispatch_forever();
-
-    wait(osWaitForever);
+    // Client unregistered, disconnect and exit program.
+    mcc_platform_interface_close();
+#endif
 }
