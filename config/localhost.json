@@ -51,7 +51,7 @@
             "lane": "humidity",
             "enabled": true,
             "subscription": {
-                "uri": "/3203/0/5514", 
+                "uri": "/3203/0/5513", 
                 "obs": true                
             }             
         }
