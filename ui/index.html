@@ -25,7 +25,7 @@
 		window.page = null;
 
 		function start() {
-			window.page = new PlantPage(`warp://${window.location.host}`);
+			window.page = new PlantPage(`warp://scott.farm`);
 			window.page.initialize();
 		}
 	</script>
@@ -64,7 +64,7 @@
 
         <div class="chartsSection">
 			<div>
-            	<h4 class="chartHeader">
+            	<h4 class="chartHeader" id="light">
 					<div>
 						Light Level 
 						<span id="lightValue">0</span>
@@ -78,7 +78,7 @@
 			</div>
 
 			<div>
-				<h4 class="chartHeader">
+				<h4 class="chartHeader" id="soil">
 					<div>
 						Soil Moisture Level 
 						<span id="soilValue">0</span>
@@ -92,7 +92,7 @@
 			</div>
 			
 			<div>
-            	<h4 class="chartHeader">
+            	<h4 class="chartHeader" id="tempAvg">
 					<div>
 						Temperature 
 						<span id="tempAvgValue">0</span>
@@ -106,7 +106,7 @@
 			</div>
 
 			<div>
-            	<h4 class="chartHeader">
+            	<h4 class="chartHeader" id="humidity">
 					<div>
 						Humidity 
 						<span id="humidityValue">0</span>

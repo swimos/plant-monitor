@@ -31,13 +31,15 @@ class PlantPage {
     this.selectedPlant = null;
     this.charts = [];
     this.plots = [];
+    this.plotDataBuffer = [];
+    this.bufferTimers = [];
     this.chartPanels = [];
 
     this.tempImg = new Image();
   }
 
   /**
-   * class init. setup swim links and deafault objects/variable 
+   * class init. setup swim links and default objects/variable 
    * and then call start()
    */
   initialize() {
@@ -130,6 +132,7 @@ class PlantPage {
     }    
 
     this.sensorLinks = [];
+    this.plotDataBuffer = [];
 
     // clear text fields
     document.getElementById("lightValue").innerHTML = ``;
@@ -167,6 +170,7 @@ class PlantPage {
 
     // redraw our charts again
     this.drawCharts();
+    this.updateAlertStates();
 
     // set plant name in UI
     document.getElementById("plantNameHeader").innerText = plant.name;
@@ -185,10 +189,12 @@ class PlantPage {
       .didUpdate((key, value) => {
         this.plantAlerts[key.stringValue()] = value;
         this.mainGauge.title(new swim.TextRunView(`${Object.keys(page.plantAlerts).length} Alerts`).font("20px sans-serif"))
+        this.updateAlertStates();
       })
       .didRemove((key) => {
         delete this.plantAlerts[key.stringValue()];
         this.mainGauge.title(new swim.TextRunView(`${Object.keys(page.plantAlerts).length} Alerts`).font("20px sans-serif"))
+        this.updateAlertStates();
       });
 
     // links to get list of sensors for plant
@@ -282,7 +288,15 @@ class PlantPage {
         this.sensorLinks[`sensor-${sensor}-history`] = swim.nodeRef(this.swimUrl, `/sensor/${plantId}/${sensor}`).downlinkMap().laneUri('history')
           .didUpdate((timestamp, sensorvalue) => {
             if (this.plots[sensor]) {
-              this.plots[sensor].insertDatum({ x: timestamp.numberValue(), y: sensorvalue.numberValue(), opacity: 1 });
+              if(!this.plotDataBuffer[sensor]) {
+                this.plotDataBuffer[sensor] = [];
+              }
+              this.plotDataBuffer[sensor].push({ x: timestamp.numberValue(), y: sensorvalue.numberValue(), opacity: 1 })
+              clearTimeout(this.bufferTimers[sensor]);
+              this.bufferTimers[sensor] = setTimeout(() => {
+                this.processDataBuffer(sensor);
+              }, 10);
+              // this.plots[sensor].insertDatum({ x: timestamp.numberValue(), y: sensorvalue.numberValue(), opacity: 1 });
             }
 
           })
@@ -300,6 +314,28 @@ class PlantPage {
       }      
 
     }    
+  }
+
+  updateAlertStates() {
+    const headerList = document.getElementsByClassName("chartHeader");
+    for(let i=0; i<headerList.length; i++) {
+      const currHeader = headerList[i];
+      const hasAlert = (this.plantAlerts[currHeader.id] !== undefined);
+      if(hasAlert) {
+        currHeader.style.backgroundColor = "#ff0000";
+        currHeader.parentElement.style.backgroundColor = "rgba(200,0,0,0.1)";
+      } else {
+        currHeader.style.backgroundColor = "#00a6ed";
+        currHeader.parentElement.style.backgroundColor = "transparent";
+      }
+
+    }
+  }
+
+  processDataBuffer(sensor) {
+    while(this.plotDataBuffer[sensor].length > 0) {
+      this.plots[sensor].insertDatum(this.plotDataBuffer[sensor].shift());
+    }
   }
 
   /**
@@ -440,4 +476,36 @@ class PlantPage {
     }
   }
 
+    /**
+   * Change the alert threshold value for one or more sensors
+   * 
+   * @param {*} sensorId 
+   */
+  changeThreshold(sensorId) {
+    if (this.selectedPlant !== null) {
+      const newValue = prompt("Enter a new threshold value.\n(0-100)");
+
+      // make sure we have a value
+      if(newValue == "" || newValue == null) {
+        return;
+      }
+
+      // if passed a specific sensor, update that one
+      // otherwise update all sensors
+      if(sensorId) {
+        swim.command(this.swimUrl, `/sensor/${this.selectedPlant.id}/${sensorId}`, 'setThreshold', newValue);
+      } else {
+        if(newValue >= 1 && newValue <= 100) {
+          for (let sensor in this.sensorList) {
+            //this.sensorLinks[`sensor-${sensor}-latest`] = swim.nodeRef(this.swimUrl, `/sensor/${plantId}/${sensor}`).downlinkValue().laneUri('latest')
+            swim.command(this.swimUrl, `/sensor/${this.selectedPlant.id}/${sensor}`, 'setThreshold', newValue);
+          }
+    
+        }
+      }
+
+
+    }
+  }
+  
 }
